@@ -6,7 +6,10 @@ import csv
 
 from os import walk
 import os.path
+from os import link
 import re
+
+import json
 
 def readEXIFTime(picPath):
     with open(picPath, "rb") as f:
@@ -42,12 +45,12 @@ def applyOffset2Timestamps(apns): #This fct set the min founded timestamp to 0
     return f
 
 def makeLots():
-    epsilon = 3
-    srcDir = "/home/tristan/opv/datasets/"
-    csvName = "charrues15_Samedi_picturesInfo_inverse.csv"
+    epsilon = 6
+    srcDir = "/home/benjamin/Documents/MDL/openpathview/datasets/Gouge"
+    csvName = "charrues15_Samedi_picturesInfo_notinverted.csv"
 
     data = getAllTimestamps(srcDir) # get timestamp data
-    #data['csv'] = readCSV(os.path.join(srcDir, csvName)) #get csv data
+    data['csv'] = readCSV(os.path.join(srcDir, csvName)) #get csv data
 
     data = applyOffset2Timestamps(data)
     data = sortAPNByTimestamp(data)
@@ -61,13 +64,60 @@ def makeLots():
         min_val = min(firstTimestampsSet.values())
 
         pathInLot = [k for k, v in firstTimestampsSet.items() if v - min_val < epsilon]
+        
+        if len(pathInLot) == 1 and pathInLot[0] == 'csv': # prevent timing errors on gopros pictures meta
+            data = applyOffset2Timestamps(data)
+            continue 
 
         lots.append(dict())
         for k in pathInLot:
             lots[lotID][k] = data[k][0]
             del data[k][0]
         lotID += 1
+        
     return lots
+
+# should be in utils class
+def ensure_dir(d):
+    if not os.path.exists(d):
+        os.makedirs(d)
+    
+def moveLotPictures(lot, outFolder):
+    ensure_dir(outFolder)
+    
+    for k  in lot:
+        if k != "csv": # if it's dirpath
+            dir_path = k
+            filename = lot[k][1]
+            apnNo = int(re.search(r"\d+", os.path.basename(dir_path)).group(0))
+            src = os.path.join(dir_path, filename)
+            dst = os.path.join(outFolder, "APN"+str(apnNo)+".JPG")
+            #print(src, "->", dst)
+            link(src, dst)
+        else: #it's the CSV
+            dst = os.path.join(outFolder, "sensors.json")
+            f = open(dst, 'w')
+            sensorsMeta = {
+                "takenDate": lot[k][1],
+                "gps": {
+                    "lat": lot[k][2],
+                    "lon": lot[k][3],
+                    "alt": lot[k][4]
+                },
+                "compass": {
+                    "degree": lot[k][5],
+                    "minutes": lot[k][6]
+                },
+                "goproFailed": lot[k][7]
+            }
+            json.dump(sensorsMeta, f)
+            f.close()
+
+def moveAllPictures(lots, outFolder):
+    i=0
+    for l in lots:
+        moveLotPictures(l, os.path.join(outFolder, str(i)))
+        i+=1
 
 def readCSV(filename):
     f = []
@@ -85,5 +135,6 @@ def readCSV(filename):
             degree, minutes = row[4].split('\u00b0')
             degree = float(degree)
             minutes = float(minutes[1:-1])
-            f.append((timestamp, timestamp, lat, lng, alt, degree, minutes))
+            goproFailed = int(row[5])
+            f.append((timestamp, timestamp, lat, lng, alt, degree, minutes, goproFailed))
     return f[::-1]
