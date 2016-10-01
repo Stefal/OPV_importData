@@ -94,8 +94,10 @@ class Main:
         self.pictInfoLocation = ""
 
         #get pictInfoLocation
-        while self.pictInfoLocation != "0" or os.path.exists(self.pictInfoLocation):
+        while self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
             self.pictInfoLocation = input("Enter path where is located pictInfo on this PC (or 0 for fetching with scp): ")
+            print(not os.path.exists(self.pictInfoLocation))
+
         if self.pictInfoLocation == "0":
             self.getPictureInfoFromPi()
 
@@ -119,7 +121,6 @@ class Main:
     def start(self):
         self.lock.clear()
         WaitForSDCard().start()
-        self.getPictureInfo()
 
         try:
             while not self.lock.is_set():
