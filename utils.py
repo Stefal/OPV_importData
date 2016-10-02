@@ -2,7 +2,17 @@ from functools import wraps
 from contextlib import contextmanager
 from collections import UserDict
 
+import os.path
+
 import json
+
+
+
+# should be in utils class
+def ensure_dir(d):
+    if not os.path.exists(d):
+        os.makedirs(d)
+
 
 def singleton(cls):
     """make the class as singleton"""

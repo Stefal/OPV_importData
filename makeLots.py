@@ -3,13 +3,15 @@ import datetime
 import exifread
 
 import csv
+import json
 
-from os import walk
 import os.path
-from os import link
+from os import walk, link
+
 import re
 
-import json
+from utils import ensure_dir, Config
+
 
 def readEXIFTime(picPath):
     with open(picPath, "rb") as f:
@@ -44,13 +46,11 @@ def applyOffset2Timestamps(apns): #This fct set the min founded timestamp to 0
         f[k] = [(vals[0] - min_timestamp, *vals[1:]) for vals in v]
     return f
 
-def makeLots():
+def makeLots(srcDir, csvFile):
     epsilon = 6
-    srcDir = "/home/benjamin/Documents/MDL/openpathview/datasets/Gouge"
-    csvName = "charrues15_Samedi_picturesInfo_notinverted.csv"
 
     data = getAllTimestamps(srcDir) # get timestamp data
-    data['csv'] = readCSV(os.path.join(srcDir, csvName)) #get csv data
+    data['csv'] = readCSV(csvFile) #get csv data
 
     data = applyOffset2Timestamps(data)
     data = sortAPNByTimestamp(data)
@@ -64,27 +64,22 @@ def makeLots():
         min_val = min(firstTimestampsSet.values())
 
         pathInLot = [k for k, v in firstTimestampsSet.items() if v - min_val < epsilon]
-        
+
         if len(pathInLot) == 1 and pathInLot[0] == 'csv': # prevent timing errors on gopros pictures meta
             data = applyOffset2Timestamps(data)
-            continue 
+            continue
 
         lots.append(dict())
         for k in pathInLot:
             lots[lotID][k] = data[k][0]
             del data[k][0]
         lotID += 1
-        
+
     return lots
 
-# should be in utils class
-def ensure_dir(d):
-    if not os.path.exists(d):
-        os.makedirs(d)
-    
 def moveLotPictures(lot, outFolder):
     ensure_dir(outFolder)
-    
+
     for k  in lot:
         if k != "csv": # if it's dirpath
             dir_path = k
@@ -114,8 +109,7 @@ def moveLotPictures(lot, outFolder):
             f.close()
 
 def moveAllPictures(lots, outFolder):
-    i=0
-    for l in lots:
+    for i,l in enumerate(lots):
         moveLotPictures(l, os.path.join(outFolder, str(i)))
         i+=1
 
@@ -138,3 +132,14 @@ def readCSV(filename):
             goproFailed = int(row[5])
             f.append((timestamp, timestamp, lat, lng, alt, degree, minutes, goproFailed))
     return f[::-1]
+
+if __name__ == "__main__":
+    conf = Config('config/main.json')
+    campaign = input('please enter campaign name: ')
+
+    srcDir = os.path.expanduser(conf["data_dir"].format(campaign=campaign))
+    csvFile = os.path.join(srcDir, campaign + '.csv')
+    lotsOutput = os.path.expanduser(conf["lots_output_dir"].format(campaign=campaign))
+
+    lots = makeLots(srcDir, csvFile)
+    moveAllPictures(lots, lotsOutput)
