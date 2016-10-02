@@ -1,13 +1,14 @@
 import json
+import pyudev
 import threading
 import subprocess
 import os
+from shutil import copyfile
 
 from time import sleep
 
-import pyudev
 
-from utils import singleton, Config
+from utils import singleton, Config, ensure_dir
 
 
 class APN_copy(threading.Thread):
@@ -119,8 +120,8 @@ class APN_copy(threading.Thread):
                     )
 
             print("Copying started from {} to {}".format(src,dest))
+            ensure_dir(dest)
             try:
-                subprocess.run(['mkdir', '-p', dest]) # create structure
                 subprocess.run(['rsync', '-a', src, dest]) # copy files
             except subprocess.CalledProcessError:
                 ex = False
@@ -160,10 +161,12 @@ class APN_copy(threading.Thread):
 @singleton
 class Main:
     def __init__(self):
-        self.config = Config('config/main.json')
         self.lock = threading.Event()
         self.APN_treated = [False for x in range(6)]
-        self.campaign = input("Please, enter the campaign name: ")
+
+    def init(self, campaign, conf):
+        self.campaign = campaign
+        self.config = conf
 
         self.pictInfoLocation = ""
 
@@ -171,9 +174,17 @@ class Main:
         while self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
             self.pictInfoLocation = input("Enter path where is located pictInfo on this PC (or 0 for fetching with scp): ")
 
-        if self.pictInfoLocation == "0":
-            if not self.getPictureInfoFromPi():
-                print("Can't get picture info from pi")
+
+        with self.config.get('data_dir') as (pictInfoDir, ):
+            pictInfoDir = os.path.expanduser(pictInfoDir.format(campaign=campaign))
+            ensure_dir(pictInfoDir)
+            dest = os.path.join(pictInfoDir, "pictureInfo.csv")
+
+            if self.pictInfoLocation == "0":
+                if not self.getPictureInfoFromPi(dest):
+                    print("Can't get picture info from pi")
+            else:
+                copyfile(self.pictInfoLocation, dest)
 
 
     def APN_copied(self, apn_n):
@@ -189,16 +200,15 @@ class Main:
         parent_devname = device.parent['DEVNAME']
         APN_copy(devname, parent_devname)
 
-    def getPictureInfoFromPi(self):
+    def getPictureInfoFromPi(self, dest):
         """
         Get the csv file from the raspberry pi
         return False on Error
         """
         ex = True
         try:
-            with self.config.get('data_dir', 'pi_location') as (pictInfoDir, piLocation):
-                self.pictInfoLocation = os.path.join(pictInfoDir, "pictureInfo.csv")
-                subprocess.run(["scp", piLocation, self.pictInfoLocation])
+            with self.config.get('data_dir', 'pi_location') as (piLocation,):
+                subprocess.run(["scp", piLocation, dest])
 
         except KeyError:
             print("Please check data_dir and pi_location on the json file")
@@ -209,6 +219,9 @@ class Main:
         return ex
 
     def start(self):
+        if not self.campaign:
+            print('Any campaign specified')
+
         self.lock.clear()
         WaitForSDCard().start()
 
@@ -248,4 +261,8 @@ class WaitForSDCard:
         Main().APN_connected(device)
 
 if __name__ == "__main__":
+    campaign = input('Enter campaign name please: ')
+    config = Config('config/main.json')
+
+    Main().init(campaign, conf)
     Main().start()
