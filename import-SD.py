@@ -4,11 +4,10 @@ import subprocess
 import os
 
 from time import sleep
-from collections import UserDict
 
 import pyudev
 
-from utils import singleton
+from utils import singleton, Config
 
 
 class APN_copy(threading.Thread):
@@ -59,10 +58,14 @@ class APN_copy(threading.Thread):
         """
         ex = True
 
-        if(Main().config['clearSD']):
-            print("Starting to clear APN", self.apn_conf['APN_num'])
-            iso = os.path.expanduser(Main().config['ISO'])
+        with Main().config.get('clearSD', 'ISO') as (c,iso):
 
+            if not c: #Don't clear anything
+                return True
+
+            iso = os.path.expanduser(iso)
+
+            print("Starting to clear APN", self.apn_conf['APN_num'])
             try:
                subprocess.run(['sudo', 'dd', 'if=' + iso, 'of=' + self.parent_devname])
             except subprocess.CalledProcessError:
@@ -101,28 +104,29 @@ class APN_copy(threading.Thread):
         """
         ex = True #return code
 
-        src = self.foundMountedPath() #Where is mounted devname
+        with Main().config.get('data_dir') as (dataDir,):
+            src = self.foundMountedPath() #Where is mounted devname
 
-        try:
-            apn_n = self.apn_conf['APN_num'] # read the APN number in config file
-        except KeyError:
-            print("We don't know what is the number of APN, aborting")
-            return False
+            try:
+                apn_n = self.apn_conf['APN_num'] # read the APN number in config file
+            except KeyError:
+                print("We don't know what is the number of APN, aborting")
+                return False
 
-        dest = os.path.expanduser(
-                os.path.join(Main().config['data_dir'].format(campaign = Main().campaign),
-                    "APN{}".format(apn_n))
-                )
+            dest = os.path.expanduser(
+                    os.path.join(dataDir.format(campaign = Main().campaign),
+                        "APN{}".format(apn_n))
+                    )
 
-        print("Copying started from {} to {}".format(src,dest))
-        try:
-            subprocess.run(['mkdir', '-p', dest]) # create structure
-            subprocess.run(['rsync', '-a', src, dest]) # copy files
-        except subprocess.CalledProcessError:
-            ex = False
-        else:
-            print("Copying finished from {} to {}".format(src,dest))
-            Main().APN_copied(apn_n)
+            print("Copying started from {} to {}".format(src,dest))
+            try:
+                subprocess.run(['mkdir', '-p', dest]) # create structure
+                subprocess.run(['rsync', '-a', src, dest]) # copy files
+            except subprocess.CalledProcessError:
+                ex = False
+            else:
+                print("Copying finished from {} to {}".format(src,dest))
+                Main().APN_copied(apn_n)
 
         return ex
 
@@ -156,7 +160,7 @@ class APN_copy(threading.Thread):
 @singleton
 class Main:
     def __init__(self):
-        self.config = Config()
+        self.config = Config('config/main.json')
         self.lock = threading.Event()
         self.APN_treated = [False for x in range(6)]
         self.campaign = input("Please, enter the campaign name: ")
@@ -192,17 +196,16 @@ class Main:
         """
         ex = True
         try:
-            pictInfoDir = self.config['data_dir']
-            piLocation = self.config["pi_location"]
+            with self.config.get('data_dir', 'pi_location') as (pictInfoDir, piLocation):
+                self.pictInfoLocation = os.path.join(pictInfoDir, "pictureInfo.csv")
+                subprocess.run(["scp", piLocation, self.pictInfoLocation])
+
         except KeyError:
             print("Please check data_dir and pi_location on the json file")
             ex = False
-        else:
-            self.pictInfoLocation = os.path.join(pictInfoDir, "pictureInfo.csv")
-            try:
-                subprocess.run(["scp", piLocation, self.pictInfoLocation])
-            except subprocess.CalledProcessError:
-                ex = False
+        except subprocess.CalledProcessError:
+            ex = False
+
         return ex
 
     def start(self):
@@ -218,26 +221,6 @@ class Main:
     def stop(self):
         self.lock.set()
         WaitForSDCard().stop()
-
-class Config(UserDict):
-    """A class which contain all the configuration"""
-    def __init__(self, configFile: str = 'config/main.json'):
-        super().__init__()
-        self.configFile = configFile
-        self._fetchConfig()
-
-    def _fetchConfig(self):
-        try:
-            with open(self.configFile, "r") as f:
-                self.data = json.load(f)
-        except FileNotFoundError:
-            print("Fatal Error: No config file")
-            Main().stop()
-        except json.decoder.JSONDecodeError:
-            print("Malformed JSON")
-
-    def reloadConfigFile(self):
-        self._fetchConfig()
 
 @singleton
 class WaitForSDCard:
