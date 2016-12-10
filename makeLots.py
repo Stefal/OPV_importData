@@ -5,6 +5,8 @@ import exifread
 import csv
 import json
 
+from collections import namedtuple, defaultdict
+
 import os.path
 from os import walk, link
 
@@ -12,8 +14,14 @@ import re
 
 from utils import ensure_dir, Config
 
+Photo = namedtuple("Photo", ["timestamp", "path"])
+Csv = namedtuple("Csv", ["timestamp", "data"])
 
 def readEXIFTime(picPath):
+    """
+    Read DateTimeOriginal tag from exif data
+    return timestamp
+    """
     with open(picPath, "rb") as f:
         tags = exifread.process_file(f, stop_tag='EXIF DateTimeOriginal')
 
@@ -22,103 +30,158 @@ def readEXIFTime(picPath):
     return timestamp
 
 def listImgsByAPN(srcDir):
+    """
+    return the list of all images in srcDir and sort them by APN (in a dict)
+    """
     r = re.compile('APN[0-9]+')
     j = re.compile('.+\.(jpeg|jpg)', re.IGNORECASE)
-    isJpg = lambda x: j.match(x)
-    isAPN = lambda x: r.match(x)
-    return {dirpath: filter(isJpg, filenames) for (dirpath,_,filenames) in walk(srcDir)
-                if isAPN(os.path.basename(dirpath))}
+
+    def isJpg(x):
+        """return true if string x finish by jpg/jpeg"""
+        return j.match(x)
+
+    def isAPN(x):
+        """return true if string x is APN* """
+        return r.match(x)
+
+    imgListByApn = []
+
+    for (dirpath, _, filenames) in walk(srcDir):
+        if isAPN(os.path.basename(dirpath)):
+            imgListByApn.append((dirpath, list(filter(isJpg, filenames))))
+
+    return imgListByApn
 
 
-def getAllTimestamps(srcDir):
+def getImgData(srcDir):
+    """
+    get all the data from scrDir (img, timestamps...)
+    """
     d = listImgsByAPN(srcDir)
-    return {dirpath:
-                [(readEXIFTime(os.path.join(dirpath, imgName)), imgName) for imgName in listImg]
-                    for dirpath, listImg in d.items()}
 
-def sortAPNByTimestamp(apns):
-    return {k: sorted(v, key=lambda x: x[0]) for k, v in apns.items()}
+    imgData = defaultdict(list)
 
-def applyOffset2Timestamps(apns): #This fct set the min founded timestamp to 0
-    f = {}
-    for k, v in apns.items():
-        min_timestamp  = min(vals[0] for vals in v) #vals[0] is timestamp
-        f[k] = [(vals[0] - min_timestamp, *vals[1:]) for vals in v]
-    return f
+    for dirpath, listImg in d:
+        for imgName in listImg:
+            imgPath = os.path.join(dirpath, imgName)
+            # extract the apn number from the last segment of dirpath (APN0, 1...)
+            apnNo = int(re.search(r"\d+", os.path.basename(dirpath)).group(0))
+
+            imgData[apnNo].append(Photo(readEXIFTime(imgPath), imgPath))
+    return imgData
+
+def sortAPNByTimestamp(apns, reverse=False):
+    """Sort all data by timestamp"""
+    apnSorted = {apn: sorted(vals, key=lambda x: x.timestamp) for apn, vals in apns.items()}
+
+    if reverse:
+        apnSorted = apnSorted[::-1]
+
+    return apnSorted
+
+def findOffset(apns, method=min):
+    """
+    Find the first valable offset
+    There is multiple methods:
+    - min -> the first lot is working
+    - max -> the last lot is working
+    """
+    offsets = {}
+    for apn, vals in apns.items():
+        offsets[apn] = method(v.timestamp for v in vals)
+    return offsets
+
+def levelTimestamps(apns, method=min):
+    """
+    Map timestamps to 0..
+    methods:
+    - min -> level 1st photo to 0
+    - max -> level -1st photo to 0
+    - otherwise: TODO
+    """
+    n_apns = defaultdict(list)
+
+    if method is min or method is max:
+        offsets = findOffset(apns, method)
+
+        for k in apns.keys():
+            for v in apns[k]:
+                n_apns[k].append(v._replace(timestamp=v.timestamp - offsets[k]))
+    return n_apns
 
 def makeLots(srcDir, csvFile):
+    """
+    Make the full lot
+    """
     epsilon = 6
 
-    data = getAllTimestamps(srcDir) # get timestamp data
-    data['csv'] = readCSV(csvFile) #get csv data
+    data = getImgData(srcDir)
+    data['csv'] = readCSV(csvFile)
 
-    data = applyOffset2Timestamps(data)
+    data = levelTimestamps(data)
     data = sortAPNByTimestamp(data)
-    lotID = 0
     lots = list()
 
+    # The algorithme try to combine photos taken with
+    # less than 6 sec of interval
+    # to make a lot, if no photo found,
+    # the lot is incomplet but can be created
     while True:
-        firstTimestampsSet = {k : v[0][0] for k, v in data.items() if len(v)}
-        if not len(firstTimestampsSet): # if no more values to treat
+        # The part of the data we will treat (maybe a lot)
+        p = {k: v[0].timestamp for k, v in data.items() if len(v)}
+
+        if len(p) == 0:  # == if data is empty => no more values to treat
             break
-        min_val = min(firstTimestampsSet.values())
 
-        pathInLot = [k for k, v in firstTimestampsSet.items() if v - min_val < epsilon]
+        min_val = min(p.values())
 
-        if len(pathInLot) == 1 and pathInLot[0] == 'csv': # prevent timing errors on gopros pictures meta
-            data = applyOffset2Timestamps(data)
+        # The list of all keys that have an img in current lot
+        keys = [k for k, v in p.items() if v - min_val < epsilon]
+
+        if len(keys) == 1 and keys[0] == 'csv':  # prevent timing errors on gopros pictures meta
+            data = levelTimestamps(data)
             continue
 
-        lots.append(dict())
-        for k in pathInLot:
-            lots[lotID][k] = data[k][0]
+        lot = {}
+        for k in keys:
+            lot[k] = data[k][0]
             del data[k][0]
-        lotID += 1
+        lots.append(lot)
 
     return lots
 
 def moveLotPictures(lot, outFolder):
     ensure_dir(outFolder)
 
-    for k  in lot:
-        if k != "csv": # if it's dirpath
-            dir_path = k
-            filename = lot[k][1]
-            apnNo = int(re.search(r"\d+", os.path.basename(dir_path)).group(0))
-            src = os.path.join(dir_path, filename)
-            dst = os.path.join(outFolder, "APN"+str(apnNo)+".JPG")
-            #print(src, "->", dst)
+    for k in lot:
+        if k != "csv":  # if it's dirpath
+            src = lot[k].path
+            dst = os.path.join(outFolder, "APN"+str(k)+".JPG")
             link(src, dst)
-        else: #it's the CSV
+        else:  # it's the CSV
+            data = lot[k].data
             dst = os.path.join(outFolder, "sensors.json")
             f = open(dst, 'w')
-            sensorsMeta = {
-                "takenDate": lot[k][1],
-                "gps": {
-                    "lat": lot[k][2],
-                    "lon": lot[k][3],
-                    "alt": lot[k][4]
-                },
-                "compass": {
-                    "degree": lot[k][5],
-                    "minutes": lot[k][6]
-                },
-                "goproFailed": lot[k][7]
-            }
-            json.dump(sensorsMeta, f)
+            json.dump(data, f)
             f.close()
 
 def moveAllPictures(lots, outFolder):
-    for i,l in enumerate(lots):
-        moveLotPictures(l, os.path.join(outFolder, str(i)))
-        i+=1
+    for lotNb, lot in enumerate(lots):
+        moveLotPictures(lot, os.path.join(outFolder, str(lotNb)))
 
 def readCSV(filename):
-    f = []
+    """
+    Read the CSV file which correspond to the operation
+    CSV is
+    timestamp,lat,long,alt,degree°minutes,goproFailed
+    return a list of Csv
+    """
+    data = []
+
     passHeader = False
     with open(filename, 'r') as csvFile:
-        data = csv.reader(csvFile, delimiter=';')
-        for row in data:
+        d = csv.reader(csvFile, delimiter=';')
+        for row in d:
             if not passHeader:
                 passHeader = True
                 continue
@@ -130,8 +193,24 @@ def readCSV(filename):
             degree = float(degree)
             minutes = float(minutes[1:-1])
             goproFailed = int(row[5])
-            f.append((timestamp, timestamp, lat, lng, alt, degree, minutes, goproFailed))
-    return f[::-1]
+
+            sensorsMeta = {
+                "takenDate": timestamp,
+                "gps": {
+                    "lat": lat,
+                    "lon": lng,
+                    "alt": alt
+                },
+                "compass": {
+                    "degree": degree,
+                    "minutes": minutes
+                },
+                "goproFailed": goproFailed
+            }
+
+            data.append(Csv(timestamp, sensorsMeta))
+    return data
+
 
 if __name__ == "__main__":
     conf = Config('config/main.json')
