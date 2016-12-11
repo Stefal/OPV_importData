@@ -1,23 +1,22 @@
-import time
-import datetime
-import exifread
-
 import csv
 import json
-
 from collections import namedtuple, defaultdict
+import re
 
 import os.path
 from os import walk, link
 
-import re
+import time
+import datetime
+import exifread
 
 from utils import ensure_dir, Config
 
+# Data Structures
 Photo = namedtuple("Photo", ["timestamp", "path"])
 Csv = namedtuple("Csv", ["timestamp", "data"])
 
-def readEXIFTime(picPath):
+def readEXIFTime(picPath: str) -> int:
     """
     Read DateTimeOriginal tag from exif data
     return timestamp
@@ -29,9 +28,9 @@ def readEXIFTime(picPath):
 
     return timestamp
 
-def listImgsByAPN(srcDir):
+def listImgsByAPN(srcDir: str) -> dict:
     """
-    return the list of all images in srcDir and sort them by APN (in a dict)
+    return the list of all images in srcDir and sort them by APN
     """
     r = re.compile('APN[0-9]+')
     j = re.compile('.+\.(jpeg|jpg)', re.IGNORECASE)
@@ -52,8 +51,10 @@ def listImgsByAPN(srcDir):
 
     return imgListByApn
 
+def getImgData(path: str) -> Photo:
+    return Photo(readEXIFTime(path), path)
 
-def getImgData(srcDir):
+def getImgsData(srcDir: str) -> dict:
     """
     get all the data from scrDir (img, timestamps...)
     """
@@ -67,7 +68,7 @@ def getImgData(srcDir):
             # extract the apn number from the last segment of dirpath (APN0, 1...)
             apnNo = int(re.search(r"\d+", os.path.basename(dirpath)).group(0))
 
-            imgData[apnNo].append(Photo(readEXIFTime(imgPath), imgPath))
+            imgData[apnNo].append(getImgData(imgPath))
     return imgData
 
 def sortAPNByTimestamp(apns, reverse=False):
@@ -91,7 +92,7 @@ def findOffset(apns, method=min):
         offsets[apn] = method(v.timestamp for v in vals)
     return offsets
 
-def levelTimestamps(apns, method=min):
+def levelTimestamps(apns: dict, method=min) -> dict:
     """
     Map timestamps to 0..
     methods:
@@ -109,13 +110,14 @@ def levelTimestamps(apns, method=min):
                 n_apns[k].append(v._replace(timestamp=v.timestamp - offsets[k]))
     return n_apns
 
-def makeLots(srcDir, csvFile):
+def makeLots(srcDir: str, csvFile: str) -> list:
     """
-    Make the full lot
+    Make all the lots
+    return a list of lots
     """
     epsilon = 6
 
-    data = getImgData(srcDir)
+    data = getImgsData(srcDir)
     data['csv'] = readCSV(csvFile)
 
     data = levelTimestamps(data)
@@ -150,26 +152,32 @@ def makeLots(srcDir, csvFile):
 
     return lots
 
-def moveLotPictures(lot, outFolder):
+def moveLot(lot: list, outFolder: str):
+    """
+    Move lot to /outFolder creating outFolder if needed
+    """
     ensure_dir(outFolder)
 
     for k in lot:
-        if k != "csv":  # if it's dirpath
-            src = lot[k].path
-            dst = os.path.join(outFolder, "APN"+str(k)+".JPG")
-            link(src, dst)
-        else:  # it's the CSV
+        if k == "csv":
             data = lot[k].data
             dst = os.path.join(outFolder, "sensors.json")
             f = open(dst, 'w')
             json.dump(data, f)
             f.close()
+        else:  # it's a dirpath
+            src = lot[k].path
+            dst = os.path.join(outFolder, "APN"+str(k)+".JPG")
+            link(src, dst)
 
-def moveAllPictures(lots, outFolder):
+def moveAllLots(lots: list, outFolder: str):
+    """
+    Move lot n° n to /outFolder/n/ for each lot in lots
+    """
     for lotNb, lot in enumerate(lots):
-        moveLotPictures(lot, os.path.join(outFolder, str(lotNb)))
+        moveLot(lot, os.path.join(outFolder, str(lotNb)))
 
-def readCSV(filename):
+def readCSV(path: str) -> list:
     """
     Read the CSV file which correspond to the operation
     CSV is
@@ -179,12 +187,16 @@ def readCSV(filename):
     data = []
 
     passHeader = False
-    with open(filename, 'r') as csvFile:
+    with open(path, 'r') as csvFile:
         d = csv.reader(csvFile, delimiter=';')
         for row in d:
+
+            # pass the first line
             if not passHeader:
                 passHeader = True
                 continue
+
+            # Convert data in a more writable way
             timestamp = int(time.mktime(time.strptime(row[0])))
             lat = float(row[1])
             lng = float(row[2])
@@ -221,4 +233,4 @@ if __name__ == "__main__":
     lotsOutput = os.path.expanduser(conf["lots_output_dir"].format(campaign=campaign))
 
     lots = makeLots(srcDir, csvFile)
-    moveAllPictures(lots, lotsOutput)
+    moveAllLots(lots, lotsOutput)
