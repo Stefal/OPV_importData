@@ -12,9 +12,31 @@ import exifread
 
 from utils import ensure_dir, Config
 
+###
+# Logging utilities
+###
+import logging
+
+logger = logging.getLogger("makelots")
+logger.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
+
+# Will log on the terminal
+steam_handler = logging.StreamHandler()
+steam_handler.setLevel(logging.DEBUG)
+logger.addHandler(steam_handler)
+
+###
 # Data Structures
+###
+
 Photo = namedtuple("Photo", ["timestamp", "path"])
 Csv = namedtuple("Csv", ["timestamp", "data"])
+
+###
+# utilities fct to list images
+###
 
 def readEXIFTime(picPath: str) -> int:
     """
@@ -32,6 +54,7 @@ def listImgsByAPN(srcDir: str) -> dict:
     """
     return the list of all images in srcDir and sort them by APN
     """
+    logger.debug("Start listing images")
     r = re.compile('APN[0-9]+')
     j = re.compile('.+\.(jpeg|jpg)', re.IGNORECASE)
 
@@ -43,12 +66,16 @@ def listImgsByAPN(srcDir: str) -> dict:
         """return true if string x is APN* """
         return r.match(x)
 
-    imgListByApn = []
+    imgListByApn = defaultdict(list)
 
     for (dirpath, _, filenames) in walk(srcDir):
         if isAPN(os.path.basename(dirpath)):
-            imgListByApn.append((dirpath, list(filter(isJpg, filenames))))
+            imgListByApn[dirpath] = list(filter(isJpg, filenames))
 
+            if len(imgListByApn[dirpath]) == 0:
+                logger.warning("No image founded in {}".format(dirpath))
+
+    logger.debug("All images listed")
     return imgListByApn
 
 def getImgData(path: str) -> Photo:
@@ -62,7 +89,7 @@ def getImgsData(srcDir: str) -> dict:
 
     imgData = defaultdict(list)
 
-    for dirpath, listImg in d:
+    for dirpath, listImg in d.items():
         for imgName in listImg:
             imgPath = os.path.join(dirpath, imgName)
             # extract the apn number from the last segment of dirpath (APN0, 1...)
@@ -70,6 +97,10 @@ def getImgsData(srcDir: str) -> dict:
 
             imgData[apnNo].append(getImgData(imgPath))
     return imgData
+
+###
+# Utilies fct to help finding lots
+###
 
 def sortAPNByTimestamp(apns, reverse=False):
     """Sort all data by timestamp"""
@@ -110,11 +141,16 @@ def levelTimestamps(apns: dict, method=min) -> dict:
                 n_apns[k].append(v._replace(timestamp=v.timestamp - offsets[k]))
     return n_apns
 
+###
+# Main part of the function
+###
+
 def makeLots(srcDir: str, csvFile: str) -> list:
     """
     Make all the lots
     return a list of lots
     """
+    logger.info("Starting making lots")
     epsilon = 6
 
     data = getImgsData(srcDir)
@@ -148,7 +184,15 @@ def makeLots(srcDir: str, csvFile: str) -> list:
         for k in keys:
             lot[k] = data[k][0]
             del data[k][0]
+
+        lotNbr = len(lots)
+        logger.debug("Lot n°{} generated".format(lotNbr))
+        if len(lot) != 7:
+            logger.warning("Malformed lot n°{}".format(lotNbr))
+
         lots.append(lot)
+
+    logger.info("All lots generated")
 
     return lots
 
