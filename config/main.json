@@ -1,5 +1,5 @@
 {
-    "data_dir" : "~/opv/datasets/{campaign}/",
+    "data_dir" : "~/opv/rederbro/{campaign}/",
     "pi_location": "pi@192.168.42.1:/home/pi/opv/lastPictureInfo.csv",
     "ISO" : "~/opv/iso/goPro.iso",
     "clearSD": 1,
