@@ -55,6 +55,9 @@ class Lot(db.Model):
     id_campaign = db.Column(db.Integer, db.ForeignKey(Campaign.id_campaign), nullable=False)
     campaign = db.relationship('Campaign', backref=backref('lots', lazy='dynamic'), foreign_keys=[id_campaign])
 
+    id_tile = db.Column(db.Integer, db.ForeignKey('tile.id_tile'))
+    tile = db.relationship('Tile', uselist=False, foreign_keys=[id_tile])
+
 class Cp(db.Model):
     id_cp = db.Column(db.Integer, primary_key=True)
     search_algo_version = db.Column(db.String(), nullable=False)
@@ -80,9 +83,6 @@ class Tile(db.Model):
     max_level = db.Column(db.Integer, nullable=False)
     cube_resolution = db.Column(db.Integer, nullable=False)
 
-    id_lot = db.Column(db.Integer, db.ForeignKey('lot.id_lot'), nullable=False)
-    lot = db.relationship(Lot, backref=backref('tiles', lazy='dynamic'), foreign_keys=[id_lot])
-
     id_panorama = db.Column(db.Integer, db.ForeignKey('panorama.id_panorama'), nullable=False)
     panorama = db.relationship(Panorama, uselist=False, backref=backref('tiles', lazy='dynamic'), foreign_keys=[id_panorama])
 
@@ -103,7 +103,6 @@ class CampaignRessource(ModelResource):
         model = Campaign
 
 class LotRessource(ModelResource):
-    tiles = Relation('tile')
     cps = Relation('cp')
 
     class Meta:
@@ -136,7 +135,6 @@ class TileRessource(ModelResource):
         model = Tile
 
     class Schema:
-        lot = fields.ToOne('lot')
         panorama = fields.ToOne('panorama')
 
 
