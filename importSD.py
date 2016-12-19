@@ -7,6 +7,7 @@ from shutil import copyfile
 
 from time import sleep
 
+from path import path
 
 from utils import singleton, Config, ensure_dir
 
@@ -23,14 +24,14 @@ class APN_copy(threading.Thread):
 
     def run(self):
         # Boooooouuuuuhhh ugly
-        sleep(1) # wait 1 sec, waiting the system to setup device block file
+        sleep(1)  # wait 1 sec, waiting the system to setup device block file
 
         if self.foundMountedPath():
-            return #already mounted, error
+            return  # already mounted, error
         success = self.mount()
         success = success and self.getAPNConf()
 
-        if success and Main().APN_treated[self.apn_n]:# SDCard already treated
+        if success and Main().APN_treated[self.apn_n]:  # SDCard already treated
             self.unmount()
             return
 
@@ -50,7 +51,7 @@ class APN_copy(threading.Thread):
         with open("/proc/mounts", "r") as mounts:
             for line in mounts:
                 if line.startswith(self.devname):
-                    return line.split(' ')[1]
+                    return path(line.split(' ')[1])
 
     def doClearSD(self):
         """
@@ -59,39 +60,39 @@ class APN_copy(threading.Thread):
         """
         ex = True
 
-        with Main().config.get('clearSD', 'ISO') as (c,iso):
+        with Main().config.get('clearSD', 'ISO') as (c, iso):
 
-            if not c: #Don't clear anything
+            if not c:  # Don't clear anything
                 return True
 
             iso = os.path.expanduser(iso)
 
             print("Starting to clear APN", self.apn_conf['APN_num'])
             try:
-               subprocess.run(['sudo', 'dd', 'if=' + iso, 'of=' + self.parent_devname])
+                subprocess.run(['sudo', 'dd', 'if=' + iso, 'of=' + self.parent_devname])
             except subprocess.CalledProcessError:
                 ex = False
             else:
-                sleep(1) #Wait devname to be updated
+                sleep(1)  # Wait devname to be updated
                 ex = self.mount()
 
                 mountedpath = self.foundMountedPath()
 
                 if ex:
                     with open(os.path.join(mountedpath, "APN_config"), "w") as apnConfFile:
-                        json.dump(self.apn_conf ,apnConfFile)
+                        json.dump(self.apn_conf, apnConfFile)
                 self.unmount()
             print("APN", self.apn_conf['APN_num'], "cleared")
 
         return ex
 
     def getAPNConf(self):
-        src = self.foundMountedPath() #Where is mounted devname
+        src = self.foundMountedPath()  # Where is mounted devname
 
-        try: # Get config file for APN
-            with open(os.path.join(src, "APN_config"), "r") as apnConfFile:
+        try:  # Get config file for APN
+            with open(path(src) / "APN_config", "r") as apnConfFile:
                 self.apn_conf = json.load(apnConfFile)
-        except FileNotFoundError: # if partition isn't OPV data partition
+        except FileNotFoundError:  # if partition isn't OPV data partition
             print("Error ! No APN_config file founded")
             return False
 
@@ -103,31 +104,28 @@ class APN_copy(threading.Thread):
         copy all the photo from the SD card
         return False on error, True otherwise
         """
-        ex = True #return code
+        ex = True  # return code
 
         with Main().config.get('data_dir') as (dataDir,):
-            src = self.foundMountedPath() #Where is mounted devname
+            src = self.foundMountedPath()  # Where is mounted devname
 
             try:
-                apn_n = self.apn_conf['APN_num'] # read the APN number in config file
+                apn_n = self.apn_conf['APN_num']  # read the APN number in config file
             except KeyError:
                 print("We don't know what is the number of APN, aborting")
                 return False
 
-            dest = os.path.expanduser(
-                    os.path.join(dataDir.format(campaign = Main().campaign),
-                        "APN{}".format(apn_n))
-                    )
+            dest = path(dataDir.format(campaign=Main().campaign)).expand() / "APN{}".format(apn_n)
 
-            print("Copying started from {} to {}".format(src,dest))
-            ensure_dir(dest)
-            try:
-                subprocess.run(['rsync', '-a', src, dest]) # copy files
-            except subprocess.CalledProcessError:
-                ex = False
-            else:
-                print("Copying finished from {} to {}".format(src,dest))
-                Main().APN_copied(apn_n)
+            dest.makedirs_p()
+
+            print("Copying started from {} to {}".format(src, dest))
+
+            for f in src.walkfiles('*.JPG'):
+                f.copy(dest)
+
+            print("Copying finished from {} to {}".format(src, dest))
+            Main().APN_copied(apn_n)
 
         return ex
 
@@ -137,7 +135,7 @@ class APN_copy(threading.Thread):
         return False on error, True otherwise
         """
         try:
-            subprocess.run(['udisksctl', 'mount', '-b',self.devname])
+            subprocess.run(['udisksctl', 'mount', '-b', self.devname])
         except subprocess.CalledProcessError:
             print("{} not mounted".format(self.devname))
             return False
@@ -151,7 +149,7 @@ class APN_copy(threading.Thread):
         unmount devname using udisckctl
         """
         try:
-            subprocess.run(['udisksctl', 'unmount', '-b',self.devname])
+            subprocess.run(['udisksctl', 'unmount', '-b', self.devname])
         except subprocess.CalledProcessError:
             print("{} not unmounted".format(self.devname))
         except FileNotFoundError:
@@ -170,10 +168,9 @@ class Main:
 
         self.pictInfoLocation = ""
 
-        #get pictInfoLocation
+        # get pictInfoLocation
         while self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
             self.pictInfoLocation = input("Enter path where is located pictInfo on this PC (or 0 for fetching with scp): ")
-
 
         with self.config.get('data_dir') as (pictInfoDir, ):
             pictInfoDir = os.path.expanduser(pictInfoDir.format(campaign=campaign))
@@ -185,7 +182,6 @@ class Main:
                     print("Can't get picture info from pi")
             else:
                 copyfile(self.pictInfoLocation, dest)
-
 
     def APN_copied(self, apn_n):
         self.APN_treated[apn_n] = True
@@ -250,19 +246,20 @@ class WaitForSDCard:
     def stop(self):
         self.observer.stop()
 
-    def onEvent(self,action, device: pyudev.Device):
+    def onEvent(self, action, device: pyudev.Device):
         """Called when a device event happen
 
         :device: A pyudev device object
         """
-        if not action == "add" or not 'partition' in device.attributes.available_attributes: # Not a partition or not added device
+        if not action == "add" or 'partition' not in device.attributes.available_attributes:  # Not a partition or not added device
             return
 
         Main().APN_connected(device)
+
 
 if __name__ == "__main__":
     campaign = input('Enter campaign name please: ')
     config = Config('config/main.json')
 
-    Main().init(campaign, conf)
+    Main().init(campaign, config)
     Main().start()
