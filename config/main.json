@@ -1,7 +1,0 @@
-{
-    "data_dir" : "~/opv/rederbro/{campaign}/",
-    "pi_location": "pi@192.168.42.1:/home/pi/opv/lastPictureInfo.csv",
-    "ISO" : "~/opv/iso/goPro.iso",
-    "clearSD": 0,
-    "lots_output_dir": "~/opv/lots/{campaign}"
-}
