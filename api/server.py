@@ -19,6 +19,7 @@ from flask_potion.routes import Relation
 from flask_potion import Api, fields, ModelResource
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 ###
 # Defining database
