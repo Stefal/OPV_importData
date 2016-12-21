@@ -10,7 +10,7 @@ import time
 import datetime
 import exifread
 
-from utils import ensure_dir, Config
+from utils import ensure_dir
 
 ###
 # Logging utilities
@@ -266,15 +266,3 @@ def readCSV(path: str) -> list:
 
             data.append(Csv(timestamp, sensorsMeta))
     return data
-
-
-if __name__ == "__main__":
-    conf = Config('config/main.json')
-    campaign = input('please enter campaign name: ')
-
-    srcDir = os.path.expanduser(conf["data_dir"].format(campaign=campaign))
-    csvFile = os.path.join(srcDir, campaign + '.csv')
-    lotsOutput = os.path.expanduser(conf["lots_output_dir"].format(campaign=campaign))
-
-    lots = makeLots(srcDir, csvFile)
-    moveAllLots(lots, lotsOutput)

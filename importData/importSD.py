@@ -9,7 +9,7 @@ from time import sleep
 
 from path import path
 
-from utils import singleton, Config, ensure_dir
+from utils import singleton, ensure_dir
 
 
 class APN_copy(threading.Thread):
@@ -172,7 +172,7 @@ class Main:
         while self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
             self.pictInfoLocation = input("Enter path where is located pictInfo on this PC (or 0 for fetching with scp): ")
 
-        with self.config.get('data_dir') as (pictInfoDir, ):
+        with self.config.get('data-dir') as (pictInfoDir, ):
             pictInfoDir = os.path.expanduser(pictInfoDir.format(campaign=campaign))
             ensure_dir(pictInfoDir)
             dest = os.path.join(pictInfoDir, "pictureInfo.csv")
@@ -203,7 +203,7 @@ class Main:
         """
         ex = True
         try:
-            with self.config.get('data_dir', 'pi_location') as (piLocation,):
+            with self.config.get('data-dir', 'pi-location') as (piLocation,):
                 subprocess.run(["scp", piLocation, dest])
 
         except KeyError:
@@ -255,11 +255,3 @@ class WaitForSDCard:
             return
 
         Main().APN_connected(device)
-
-
-if __name__ == "__main__":
-    campaign = input('Enter campaign name please: ')
-    config = Config('config/main.json')
-
-    Main().init(campaign, config)
-    Main().start()

@@ -1,18 +1,12 @@
 from functools import wraps
-from contextlib import contextmanager
 from collections import UserDict
-
 import os.path
-
 import json
 
 
-
-# should be in utils class
 def ensure_dir(d):
     if not os.path.exists(d):
         os.makedirs(d)
-
 
 def singleton(cls):
     """make the class as singleton"""
@@ -28,7 +22,6 @@ def singleton(cls):
 
     return fct
 
-
 class Config(UserDict):
     """A class which contain all the configuration"""
     def __init__(self, configFile: str = 'config/main.json'):
@@ -36,16 +29,22 @@ class Config(UserDict):
         self.configFile = configFile
         self._fetchConfig()
 
-    @contextmanager
-    def get(self, *keys):
-        try:
-            yield [self[k] for k in keys]
-        finally:
-            pass
-
     def _fetchConfig(self):
         with open(self.configFile, "r") as f:
             self.data = json.load(f)
 
     def reloadConfigFile(self):
         self._fetchConfig()
+
+def select_arg(active, disable):
+    if disable:
+        return False
+    elif active:
+        return True
+    return None
+
+def convert_args(args, name, invert=False):
+    if invert:
+        return select_arg(args['--' + name], args['--no-' + name])
+    else:
+        return args['--' + name]
