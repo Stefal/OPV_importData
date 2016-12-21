@@ -21,13 +21,12 @@ Options:
     --data-dir=<str>      Where should be placed file imported from SD
     --lots-output-dir=<str>   Where created lots may be placed
 """
-
-import os
-import os.path
 from importSD import Main
-from makeLots import makeLots, moveAllLots
+from makeLots import makeLots, moveLot
 
 from docopt import docopt
+
+from path import path
 
 from utils import Config, convert_args
 
@@ -49,17 +48,15 @@ if __name__ == "__main__":
     conf = Config('config/main.json')
     conf.update(f_args)
 
-    srcDir = os.path.expanduser(conf["data-dir"].format(campaign=conf.get('campaign')))
-    csvFile = os.path.join(srcDir, "pictureInfo.csv")
-    lotsOutput = os.path.expanduser(conf["lots-output-dir"].format(campaign=conf.get('campaign')))
+    srcDir = path(conf["data-dir"].format(campaign=conf.get('campaign'))).expand()
+    csvFile = path(srcDir) / "pictureInfo.csv"
+    lotsOutput = path(conf["lots-output-dir"].format(campaign=conf.get('campaign'))).expand
 
-    Main().init(conf.get('campaign'), conf)
-    Main().start()
-
-    if conf.get('treat'):
+    if conf.get('import'):
+        Main().init(conf.get('campaign'), conf).start()
         print("Recuperation of data from SD card is finished")
 
-        lots = makeLots(srcDir, csvFile)
-        moveAllLots(lots, lotsOutput)
-
+    if conf.get('treat'):
+        for lotNb, lot in enumerate(makeLots(srcDir, csvFile)):
+            moveLot(lot, lotsOutput / str(lotNb))
         print("Lots generated")
