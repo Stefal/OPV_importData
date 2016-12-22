@@ -63,7 +63,7 @@ def makeAndRun(db_location):
     if db_location and db_location != "in-memory":
         app.config['SQLALCHEMY_DATABASE_URI'] = db_location
     db.create_all()
-    app.run()
+    app.run(port=5001)
 
 
 if __name__ == '__main__':
