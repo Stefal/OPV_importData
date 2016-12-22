@@ -30,8 +30,8 @@ db = SQLAlchemy(app)
 
 class Campaign(db.Model):
     id_campaign = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(), nullable=False)
-    describtion = db.Column(db.String())
+    name = db.Column(db.String(50), nullable=False)
+    decription = db.Column(db.String(150))
     id_rederbro = db.Column(db.Integer)
 
 class Sensors(db.Model):
@@ -50,10 +50,10 @@ class Lot(db.Model):
     goprofailed = db.Column(db.Integer, nullable=False)
     takenDate = db.Column(db.DateTime, nullable=False)
 
-    id_sensors = db.Column(db.Integer, db.ForeignKey(Sensors.id_sensors), nullable=False)
+    id_sensors = db.Column(db.Integer, db.ForeignKey('sensors.id_sensors'), nullable=False)
     sensors = db.relationship('Sensors', uselist=False, backref=backref('lot', lazy='dynamic'), foreign_keys=[id_sensors])
 
-    id_campaign = db.Column(db.Integer, db.ForeignKey(Campaign.id_campaign), nullable=False)
+    id_campaign = db.Column(db.Integer, db.ForeignKey('campaign.id_campaign'), nullable=False)
     campaign = db.relationship('Campaign', backref=backref('lots', lazy='dynamic'), foreign_keys=[id_campaign])
 
     id_tile = db.Column(db.Integer, db.ForeignKey('tile.id_tile'))
@@ -61,11 +61,11 @@ class Lot(db.Model):
 
 class Cp(db.Model):
     id_cp = db.Column(db.Integer, primary_key=True)
-    search_algo_version = db.Column(db.String(), nullable=False)
+    search_algo_version = db.Column(db.String(20), nullable=False)
     nb_cp = db.Column(db.Integer, nullable=False)
     stichable = db.Column(db.Boolean, nullable=False)
 
-    id_lot = db.Column(db.Integer, db.ForeignKey(Lot.id_lot), nullable=False)
+    id_lot = db.Column(db.Integer, db.ForeignKey('lot.id_lot'), nullable=False)
     lot = db.relationship(Lot, backref=backref('cps', lazy='dynamic'))
 
 class Panorama(db.Model):
@@ -79,7 +79,7 @@ class Tile(db.Model):
     id_tile = db.Column(db.Integer, primary_key=True)
     param_location = db.Column(db.Integer, nullable=False)
     fallback_path = db.Column(db.Integer, nullable=False)
-    extension = db.Column(db.String(), nullable=False)
+    extension = db.Column(db.String(5), nullable=False)
     resolution = db.Column(db.Integer, nullable=False)
     max_level = db.Column(db.Integer, nullable=False)
     cube_resolution = db.Column(db.Integer, nullable=False)
