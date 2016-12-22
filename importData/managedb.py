@@ -2,10 +2,11 @@ from potion_client import Client
 
 client = Client('http://localhost:5000')
 
-def make_campaign(name, id_rederbro):
+def make_campaign(name, id_rederbro, description):
     campaign = client.Campaign()
     campaign.name = name
     campaign.id_rederbro = id_rederbro
+    campaign.description = description
     campaign.save()
     return campaign
 

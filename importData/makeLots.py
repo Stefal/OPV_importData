@@ -1,16 +1,13 @@
 import csv
-import json
 from collections import namedtuple, defaultdict
 import re
 
-import os.path
-from os import walk, link
+from path import path
+from os import walk
 
 import time
 import datetime
 import exifread
-
-from utils import ensure_dir
 
 ###
 # Logging utilities
@@ -69,7 +66,7 @@ def listImgsByAPN(srcDir: str) -> dict:
     imgListByApn = defaultdict(list)
 
     for (dirpath, _, filenames) in walk(srcDir):
-        if isAPN(os.path.basename(dirpath)):
+        if isAPN(path(dirpath).basename()):
             imgListByApn[dirpath] = list(filter(isJpg, filenames))
 
             if len(imgListByApn[dirpath]) == 0:
@@ -78,8 +75,8 @@ def listImgsByAPN(srcDir: str) -> dict:
     logger.debug("All images listed")
     return imgListByApn
 
-def getImgData(path: str) -> Photo:
-    return Photo(readEXIFTime(path), path)
+def getImgData(p: str) -> Photo:
+    return Photo(readEXIFTime(p), path(p))
 
 def getImgsData(srcDir: str) -> dict:
     """
@@ -91,9 +88,9 @@ def getImgsData(srcDir: str) -> dict:
 
     for dirpath, listImg in d.items():
         for imgName in listImg:
-            imgPath = os.path.join(dirpath, imgName)
+            imgPath = path(dirpath) / imgName
             # extract the apn number from the last segment of dirpath (APN0, 1...)
-            apnNo = int(re.search(r"\d+", os.path.basename(dirpath)).group(0))
+            apnNo = int(re.search(r"\d+", path(dirpath).basename()).group(0))
 
             imgData[apnNo].append(getImgData(imgPath))
     return imgData
@@ -196,32 +193,7 @@ def makeLots(srcDir: str, csvFile: str) -> list:
 
     return lots
 
-def moveLot(lot: list, outFolder: str):
-    """
-    Move lot to /outFolder creating outFolder if needed
-    """
-    ensure_dir(outFolder)
-
-    for k in lot:
-        if k == "csv":
-            data = lot[k].data
-            dst = os.path.join(outFolder, "sensors.json")
-            f = open(dst, 'w')
-            json.dump(data, f)
-            f.close()
-        else:  # it's a dirpath
-            src = lot[k].path
-            dst = os.path.join(outFolder, "APN"+str(k)+".JPG")
-            link(src, dst)
-
-def moveAllLots(lots: list, outFolder: str):
-    """
-    Move lot n° n to /outFolder/n/ for each lot in lots
-    """
-    for lotNb, lot in enumerate(lots):
-        moveLot(lot, os.path.join(outFolder, str(lotNb)))
-
-def readCSV(path: str) -> list:
+def readCSV(csv_path: str) -> list:
     """
     Read the CSV file which correspond to the operation
     CSV is
@@ -231,7 +203,7 @@ def readCSV(path: str) -> list:
     data = []
 
     passHeader = False
-    with open(path, 'r') as csvFile:
+    with open(csv_path, 'r') as csvFile:
         d = csv.reader(csvFile, delimiter=';')
         for row in d:
 

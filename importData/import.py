@@ -20,15 +20,18 @@ Options:
     --no-import           Don't import files
     --data-dir=<str>      Where should be placed file imported from SD
     --lots-output-dir=<str>   Where created lots may be placed
+    --id-rederbro=<str>   Id of the rederbro use fot the campaign
+    --description=<str>   Description of the campaign
 """
-from importSD import Main
-from makeLots import makeLots, moveLot
-
 from docopt import docopt
-
 from path import path
 
+from importSD import Main
+from makeLots import makeLots
 from utils import Config, convert_args
+from treat import treat
+
+import managedb
 
 if __name__ == "__main__":
     args = docopt(__doc__)
@@ -37,7 +40,7 @@ if __name__ == "__main__":
     # Convert args
     for n in ['clean-sd', 'import', 'treat']:
         f_args[n] = convert_args(args, n, True)
-    for n in ['data-dir', 'lots-output-dir']:
+    for n in ['data-dir', 'lots-output-dir', 'id-rederbro', 'description']:
         f_args[n] = convert_args(args, n)
     f_args['campaign'] = args['<campaign>']
 
@@ -48,15 +51,16 @@ if __name__ == "__main__":
     conf = Config('config/main.json')
     conf.update(f_args)
 
+    campaign = managedb.make_campaign(conf['campaign'], conf['id-rederbro'], conf.get('description'))
+    lots = []
+
     srcDir = path(conf["data-dir"].format(campaign=conf.get('campaign'))).expand()
     csvFile = path(srcDir) / "pictureInfo.csv"
-    lotsOutput = path(conf["lots-output-dir"].format(campaign=conf.get('campaign'))).expand
 
     if conf.get('import'):
         Main().init(conf.get('campaign'), conf).start()
         print("Recuperation of data from SD card is finished")
 
     if conf.get('treat'):
-        for lotNb, lot in enumerate(makeLots(srcDir, csvFile)):
-            moveLot(lot, lotsOutput / str(lotNb))
-        print("Lots generated")
+        for l in makeLots(srcDir, csvFile):
+            treat(campaign, l)
