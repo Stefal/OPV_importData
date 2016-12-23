@@ -185,8 +185,6 @@ def makeLots(srcDir: str, csvFile: str) -> list:
 
     logger.info("All lots generated")
 
-    return lots
-
 def readCSV(csv_path: str) -> list:
     """
     Read the CSV file which correspond to the operation

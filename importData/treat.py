@@ -3,7 +3,13 @@ import filemanager
 import datetime
 
 def treat(campaign, l):
-    sensorsData = l['csv'].data
+    try:
+        sensorsData = l['csv'].data
+    except KeyError:
+        sensorsData = {'gps': {'lat': 0, 'lon': 0, 'alt': 0},
+                       'compass': {'degree': 0, 'minutes': 0},
+                       'takenDate': 0,
+                       'goproFailed': 0}
 
     sensors = managedb.make_sensors(sensorsData['gps']['lat'],
                                     sensorsData['gps']['lon'],
@@ -21,5 +27,6 @@ def treat(campaign, l):
                             date)
 
     print("Lot n°{} generated".format(lot.id))
-    if len(lot) != 7:
+    print(l)
+    if len(l) != 7:
         print("Malformed lot n°{}".format(lot.id))
