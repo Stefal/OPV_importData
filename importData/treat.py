@@ -3,6 +3,7 @@ import filemanager
 import datetime
 
 def treat(campaign, l):
+
     try:
         sensorsData = l['csv'].data
     except KeyError:
@@ -17,7 +18,7 @@ def treat(campaign, l):
                                     sensorsData['compass']['degree'],
                                     sensorsData['compass']['minutes'])
 
-    pictures_path = filemanager.addFiles(l)
+    pictures_path = filemanager.addFiles(l.copy())
 
     date = datetime.datetime.fromtimestamp(sensorsData['takenDate'])
     lot = managedb.make_lot(campaign,
@@ -26,7 +27,6 @@ def treat(campaign, l):
                             sensorsData['goproFailed'],
                             date)
 
-    print("Lot n°{} generated".format(lot.id))
-    print(l)
     if len(l) != 7:
         print("Malformed lot n°{}".format(lot.id))
+    print("Lot n°{} generated".format(lot.id))
