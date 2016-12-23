@@ -32,7 +32,7 @@ db = SQLAlchemy(app)
 
 class File(db.Model):
     uuid = db.Column(db.Integer, primary_key=True)
-    path = db.Column(db.String())
+    path = db.Column(db.String(250))
 
 ###
 # Defining all ressources
