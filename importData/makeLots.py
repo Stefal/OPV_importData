@@ -155,7 +155,6 @@ def makeLots(srcDir: str, csvFile: str) -> list:
 
     data = levelTimestamps(data)
     data = sortAPNByTimestamp(data)
-    lots = list()
 
     # The algorithme try to combine photos taken with
     # less than 6 sec of interval
@@ -182,12 +181,7 @@ def makeLots(srcDir: str, csvFile: str) -> list:
             lot[k] = data[k][0]
             del data[k][0]
 
-        lotNbr = len(lots)
-        logger.debug("Lot n°{} generated".format(lotNbr))
-        if len(lot) != 7:
-            logger.warning("Malformed lot n°{}".format(lotNbr))
-
-        lots.append(lot)
+        yield lot
 
     logger.info("All lots generated")
 

@@ -23,4 +23,3 @@ def treat(campaign, l):
     print("Lot n°{} generated".format(lot.id))
     if len(lot) != 7:
         print("Malformed lot n°{}".format(lot.id))
-    print("All lots generated")
