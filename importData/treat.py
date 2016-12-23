@@ -8,7 +8,7 @@ def treat(campaign, l):
     except KeyError:
         sensorsData = {'gps': {'lat': 0, 'lon': 0, 'alt': 0},
                        'compass': {'degree': 0, 'minutes': 0},
-                       'takenDate': 0,
+                      'takenDate': 0,
                        'goproFailed': 0}
 
     sensors = managedb.make_sensors(sensorsData['gps']['lat'],
