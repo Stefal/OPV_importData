@@ -1,14 +1,16 @@
 """Api server and db
 
 Usage:
-  server.py run [--db-location=<str>]
+  server.py run [--db-location=<str>] [--storage-location=<str>]
   server.py (-h | --help)
 
 Options:
-  -h --help             Show this screen.
-  --db-location=<path>  Set the database location (e.g sqlite:////tmp/test.db) [default: in-memory].
+  -h --help                  Show this screen.
+  --db-location=<path>       Set the database location (e.g sqlite:////tmp/test.db) [default: in-memory]
+  --storage-location=<path> The path to the storage location
 
 """
+import os.path
 
 from docopt import docopt
 
@@ -19,9 +21,10 @@ from flask_potion.fields import Inline
 
 app = Flask(__name__)
 
+storage_location = ''
 
 def determine_path_from_uuid(uuid):
-    return "file:///default/location/to/files/{}" .format(uuid)
+    return os.path.join(storage_location, str(uuid))
 
 
 ###
@@ -68,4 +71,5 @@ def makeAndRun(db_location):
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
+    storage_location = arguments['--storage-location'] or ''
     makeAndRun(arguments['--db-location'])

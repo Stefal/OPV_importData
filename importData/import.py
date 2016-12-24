@@ -31,6 +31,7 @@ from makeLots import makeLots
 from utils import Config, convert_args
 from treat import treat
 
+import task
 import managedb
 
 if __name__ == "__main__":
@@ -63,4 +64,5 @@ if __name__ == "__main__":
 
     if conf.get('treat'):
         for l in makeLots(srcDir, csvFile):
-            treat(campaign, l)
+            lot = treat(campaign, l)
+            task.assemble.delay(lot.id) #lot object can't be send through network
