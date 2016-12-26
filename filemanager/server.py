@@ -51,7 +51,13 @@ class FileRessource(ModelResource):
         proterties = dict()
         f = self.manager.create(proterties)
 
-        proterties['path'] = determine_path_from_uuid(f.uuid)
+        path = determine_path_from_uuid(f.uuid)
+
+        # Ensure path really exists, make it otherwise
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        proterties['path'] = path
 
         self.manager.update(f, proterties)
         return f
