@@ -1,7 +1,7 @@
 """Api server and db
 
 Usage:
-  server.py run [--db-location=<str>] [--storage-location=<str>]
+  server.py run [--db-location=<str>] --storage-location=<str>
   server.py (-h | --help)
 
 Options:
