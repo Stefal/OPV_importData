@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+# coding: utf-8
 """Api server and db
 
 Usage:
@@ -20,6 +22,7 @@ from flask_potion import Api, ModelResource
 from flask_potion.fields import Inline
 
 app = Flask(__name__)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 storage_location = ''
 
