@@ -60,29 +60,30 @@ class APN_copy(threading.Thread):
         """
         ex = True
 
-        with Main().config.get('clearSD', 'ISO') as (c, iso):
+        c, iso = Main().config.get('clearSD', 'ISO')
 
-            if not c:  # Don't clear anything
-                return True
+        if not c:  # Don't clear anything
+            return True
 
-            iso = os.path.expanduser(iso)
+        iso = os.path.expanduser(iso)
 
-            print("Starting to clear APN", self.apn_conf['APN_num'])
-            try:
-                subprocess.run(['sudo', 'dd', 'if=' + iso, 'of=' + self.parent_devname])
-            except subprocess.CalledProcessError:
-                ex = False
-            else:
-                sleep(1)  # Wait devname to be updated
-                ex = self.mount()
+        print("Starting to clear APN", self.apn_conf['APN_num'])
+        try:
+            #subprocess.run(['sudo', 'dd', 'if=' + iso, 'of=' + self.parent_devname])
+            pass
+        except subprocess.CalledProcessError:
+            ex = False
+        else:
+            sleep(1)  # Wait devname to be updated
+            ex = self.mount()
 
-                mountedpath = self.foundMountedPath()
+            mountedpath = self.foundMountedPath()
 
-                if ex:
-                    with open(os.path.join(mountedpath, "APN_config"), "w") as apnConfFile:
-                        json.dump(self.apn_conf, apnConfFile)
-                self.unmount()
-            print("APN", self.apn_conf['APN_num'], "cleared")
+            if ex:
+                with open(os.path.join(mountedpath, "APN_config"), "w") as apnConfFile:
+                    json.dump(self.apn_conf, apnConfFile)
+            self.unmount()
+        print("APN", self.apn_conf['APN_num'], "cleared")
 
         return ex
 
@@ -106,26 +107,28 @@ class APN_copy(threading.Thread):
         """
         ex = True  # return code
 
-        with Main().config.get('data_dir') as (dataDir,):
-            src = self.foundMountedPath()  # Where is mounted devname
+        dataDir = Main().config.get('data-dir')
+        src = self.foundMountedPath()  # Where is mounted devname
 
-            try:
-                apn_n = self.apn_conf['APN_num']  # read the APN number in config file
-            except KeyError:
-                print("We don't know what is the number of APN, aborting")
-                return False
+        try:
+            apn_n = self.apn_conf['APN_num']  # read the APN number in config file
+        except KeyError:
+            print("We don't know what is the number of APN, aborting")
+            return False
+        print(apn_n)
+        a=dataDir.format(campaign=Main().campaign)
+        print(a)
+        dest = path(a).expand() / "APN{}".format(apn_n)
 
-            dest = path(dataDir.format(campaign=Main().campaign)).expand() / "APN{}".format(apn_n)
+        dest.makedirs_p()
 
-            dest.makedirs_p()
+        print("Copying started from {} to {}".format(src, dest))
 
-            print("Copying started from {} to {}".format(src, dest))
+        for f in src.walkfiles('*.JPG'):
+            f.copy(dest)
 
-            for f in src.walkfiles('*.JPG'):
-                f.copy(dest)
-
-            print("Copying finished from {} to {}".format(src, dest))
-            Main().APN_copied(apn_n)
+        print("Copying finished from {} to {}".format(src, dest))
+        Main().APN_copied(apn_n)
 
         return ex
 
@@ -135,7 +138,7 @@ class APN_copy(threading.Thread):
         return False on error, True otherwise
         """
         try:
-            subprocess.run(['udisksctl', 'mount', '-b', self.devname])
+            subprocess.call(['udisksctl', 'mount', '-b', self.devname])
         except subprocess.CalledProcessError:
             print("{} not mounted".format(self.devname))
             return False
@@ -149,7 +152,7 @@ class APN_copy(threading.Thread):
         unmount devname using udisckctl
         """
         try:
-            subprocess.run(['udisksctl', 'unmount', '-b', self.devname])
+            subprocess.call(['udisksctl', 'unmount', '-b', self.devname])
         except subprocess.CalledProcessError:
             print("{} not unmounted".format(self.devname))
         except FileNotFoundError:
@@ -172,16 +175,20 @@ class Main:
         while self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
             self.pictInfoLocation = input("Enter path where is located pictInfo on this PC (or 0 for fetching with scp): ")
 
-        with self.config.get('data-dir') as (pictInfoDir, ):
-            pictInfoDir = os.path.expanduser(pictInfoDir.format(campaign=campaign))
-            ensure_dir(pictInfoDir)
-            dest = os.path.join(pictInfoDir, "pictureInfo.csv")
+        print(self.config.get('data-dir'))
 
-            if self.pictInfoLocation == "0":
-                if not self.getPictureInfoFromPi(dest):
-                    print("Can't get picture info from pi")
-            else:
-                copyfile(self.pictInfoLocation, dest)
+        pictInfoDir = self.config.get('data-dir')
+        pictInfoDir = os.path.expanduser(pictInfoDir.format(campaign=campaign))
+        ensure_dir(pictInfoDir)
+        dest = os.path.join(pictInfoDir, "pictureInfo.csv")
+
+        if self.pictInfoLocation == "0":
+            if not self.getPictureInfoFromPi(dest):
+                print("Can't get picture info from pi")
+        else:
+            copyfile(self.pictInfoLocation, dest)
+
+        return self
 
     def APN_copied(self, apn_n):
         self.APN_treated[apn_n] = True
@@ -204,7 +211,7 @@ class Main:
         ex = True
         try:
             with self.config.get('data-dir', 'pi-location') as (piLocation,):
-                subprocess.run(["scp", piLocation, dest])
+                subprocess.call(["scp", piLocation, dest])
 
         except KeyError:
             print("Please check data_dir and pi_location on the json file")
