@@ -43,7 +43,8 @@ def readEXIFTime(picPath: str) -> int:
     with open(picPath, "rb") as f:
         tags = exifread.process_file(f, stop_tag='EXIF DateTimeOriginal')
 
-    timestamp = int(time.mktime(datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values, "%Y:%m:%d %H:%M:%S").timetuple()))
+    # timestamp = int(time.mktime(datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values, "%Y:%m:%d %H:%M:%S").timetuple()))
+    timestamp = int(datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values, "%Y:%m:%d %H:%M:%S").timestamp())
 
     return timestamp
 
@@ -65,9 +66,10 @@ def listImgsByAPN(srcDir: str) -> dict:
 
     imgListByApn = defaultdict(list)
 
-    for (dirpath, _, filenames) in walk(srcDir):
+    for dirpath, _, filenames in walk(srcDir):
         if isAPN(path(dirpath).basename()):
-            imgListByApn[dirpath] = list(filter(isJpg, filenames))
+            # imgListByApn[dirpath] = list(filter(isJpg, filenames))
+            imgListByApn[dirpath] = [f for f in filenames if isJpg(f)]
 
             if len(imgListByApn[dirpath]) == 0:
                 logger.warning("No image founded in {}".format(dirpath))
@@ -93,6 +95,24 @@ def getImgsData(srcDir: str) -> dict:
             apnNo = int(re.search(r"\d+", path(dirpath).basename()).group(0))
 
             imgData[apnNo].append(getImgData(imgPath))
+    return imgData
+
+def getImgsDataBis(srcDir: str):
+    """
+    get all the data from scrDir (img, timestamps...)
+    """
+    d = listImgsByAPN(srcDir)
+
+    imgData = defaultdict(list)
+
+    for dirpath, listImg in d.items():
+        # extract the apn number from the last segment of dirpath (APN0, 1...)
+        apnNo = int(re.search(r"\d+", path(dirpath).basename()).group(0))
+
+        for imgName in listImg:
+            imgPath = path(dirpath) / imgName
+            imgData[apnNo].append(getImgData(imgPath))
+
     return imgData
 
 ###

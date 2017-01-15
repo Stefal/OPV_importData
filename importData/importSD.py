@@ -23,13 +23,14 @@ class APN_copy(threading.Thread):
         self.start()
 
     def run(self):
+        print("APN_copy -- run ", self.devname)
         # Boooooouuuuuhhh ugly
         sleep(1)  # wait 1 sec, waiting the system to setup device block file
 
-        if self.foundMountedPath():
-            return  # already mounted, error
-        success = self.mount()
-        success = success and self.getAPNConf()
+        if not self.foundMountedPath():
+            self.mount()
+
+        success = self.foundMountedPath() and self.getAPNConf()
 
         if success and Main().APN_treated[self.apn_n]:  # SDCard already treated
             self.unmount()
@@ -60,7 +61,8 @@ class APN_copy(threading.Thread):
         """
         ex = True
 
-        c, iso = Main().config.get('clearSD', 'ISO')
+        c = Main().config.get('clearSD')
+        iso = Main().config.get('ISO')
 
         if not c:  # Don't clear anything
             return True
@@ -115,9 +117,7 @@ class APN_copy(threading.Thread):
         except KeyError:
             print("We don't know what is the number of APN, aborting")
             return False
-        print(apn_n)
-        a=dataDir.format(campaign=Main().campaign)
-        print(a)
+        a = dataDir.format(campaign=Main().campaign)
         dest = path(a).expand() / "APN{}".format(apn_n)
 
         dest.makedirs_p()
@@ -200,7 +200,11 @@ class Main:
         :device: the device where is situed the APN
         """
         devname = device['DEVNAME']
-        parent_devname = device.parent['DEVNAME']
+        if 'parent' in device:
+            parent_devname = device.parent['DEVNAME']
+        else:
+            parent_devname = device['DEVNAME'][:-1]
+        print("APN_connected : ", devname, "--", parent_devname)
         APN_copy(devname, parent_devname)
 
     def getPictureInfoFromPi(self, dest):
@@ -258,7 +262,6 @@ class WaitForSDCard:
 
         :device: A pyudev device object
         """
-        if not action == "add" or 'partition' not in device.attributes.available_attributes:  # Not a partition or not added device
-            return
 
-        Main().APN_connected(device)
+        if action == "add" and 'DEVNAME' in device.keys() and "partition" in device.attributes.available_attributes:
+            Main().APN_connected(device)

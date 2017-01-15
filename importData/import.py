@@ -23,6 +23,7 @@ Options:
     --lots-output-dir=<str>   Where created lots may be placed
     --id-rederbro=<str>   Id of the rederbro use fot the campaign
     --description=<str>   Description of the campaign
+    --csv-local=<str>     Local path of the csv file (pictureInfo)
 """
 from docopt import docopt
 from path import path
