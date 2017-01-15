@@ -1,22 +1,19 @@
-import csv
-from collections import namedtuple, defaultdict
+#!/usr/bin/python3
+# coding: utf-8
+
 import re
-
-from path import path
-from os import walk
-
+import csv
 import time
+import logging
 import datetime
 import exifread
 
-###
-# Logging utilities
-###
-import logging
+from os import walk
+from path import path
+from collections import namedtuple, defaultdict
 
 logger = logging.getLogger("makelots")
 logger.setLevel(logging.DEBUG)
-
 formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
 
 # Will log on the terminal
@@ -35,6 +32,7 @@ Csv = namedtuple("Csv", ["timestamp", "data"])
 # utilities fct to list images
 ###
 
+
 def readEXIFTime(picPath: str) -> int:
     """
     Read DateTimeOriginal tag from exif data
@@ -47,6 +45,7 @@ def readEXIFTime(picPath: str) -> int:
     timestamp = int(datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values, "%Y:%m:%d %H:%M:%S").timestamp())
 
     return timestamp
+
 
 def listImgsByAPN(srcDir: str) -> dict:
     """
@@ -77,8 +76,10 @@ def listImgsByAPN(srcDir: str) -> dict:
     logger.debug("All images listed")
     return imgListByApn
 
+
 def getImgData(p: str) -> Photo:
     return Photo(readEXIFTime(p), path(p))
+
 
 def getImgsData(srcDir: str) -> dict:
     """
@@ -96,6 +97,7 @@ def getImgsData(srcDir: str) -> dict:
 
             imgData[apnNo].append(getImgData(imgPath))
     return imgData
+
 
 def getImgsDataBis(srcDir: str):
     """
@@ -118,6 +120,7 @@ def getImgsDataBis(srcDir: str):
 # Utilies fct to help finding lots
 ###
 
+
 def sortAPNByTimestamp(apns, reverse=False):
     """Sort all data by timestamp"""
     apnSorted = {apn: sorted(vals, key=lambda x: x.timestamp) for apn, vals in apns.items()}
@@ -126,6 +129,7 @@ def sortAPNByTimestamp(apns, reverse=False):
         apnSorted = apnSorted[::-1]
 
     return apnSorted
+
 
 def findOffset(apns, method=min):
     """
@@ -138,6 +142,7 @@ def findOffset(apns, method=min):
     for apn, vals in apns.items():
         offsets[apn] = method(v.timestamp for v in vals)
     return offsets
+
 
 def levelTimestamps(apns: dict, method=max) -> dict:
     """
@@ -160,6 +165,7 @@ def levelTimestamps(apns: dict, method=max) -> dict:
 ###
 # Main part of the function
 ###
+
 
 def makeLots(srcDir: str, csvFile: str) -> list:
     """
@@ -203,6 +209,7 @@ def makeLots(srcDir: str, csvFile: str) -> list:
         yield lot
 
     logger.info("All lots generated")
+
 
 def readCSV(csv_path: str) -> list:
     """

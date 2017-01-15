@@ -1,6 +1,10 @@
+#!/usr/bin/python3
+# coding: utf-8
+
 from potion_client import Client
 
 client = Client('http://localhost:5000')
+
 
 def make_campaign(name, id_rederbro, description):
     campaign = client.Campaign()
@@ -9,6 +13,7 @@ def make_campaign(name, id_rederbro, description):
     campaign.description = description
     campaign.save()
     return campaign
+
 
 def make_lot(campaign, pictures_path, sensors, goprofailed, takenDate, tile=None):
     lot = client.Lot()
@@ -21,6 +26,7 @@ def make_lot(campaign, pictures_path, sensors, goprofailed, takenDate, tile=None
     lot.save()
     return lot
 
+
 def make_sensors(gps_lat, gps_lon, gps_alt, compass_deg, compass_min):
     sensors = client.Sensors()
     sensors.gps_alt = gps_alt
@@ -31,6 +37,7 @@ def make_sensors(gps_lat, gps_lon, gps_alt, compass_deg, compass_min):
     sensors.save()
     return sensors
 
+
 def make_cp(search_algo_version, nb_cp, stichable, lot):
     cp = client.Cp()
     cp.search_algo_version = search_algo_version
@@ -40,12 +47,14 @@ def make_cp(search_algo_version, nb_cp, stichable, lot):
     cp.save()
     return cp
 
+
 def make_panorama(equirectangular_path, cp):
     panorama = client.Panorama()
     panorama.equirectangular_path = equirectangular_path
     panorama.cp = cp
     panorama.save()
     return panorama
+
 
 def make_tile(param_location, fallback_path, extension, resolution, max_level, cube_resolution, panorama):
     tile = client.Tile()
