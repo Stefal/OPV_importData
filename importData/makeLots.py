@@ -114,7 +114,6 @@ def getImgsDataBis(srcDir: str):
             imgData[apnNo].append(getImgData(imgPath))
 
     return imgData
-
 ###
 # Utilies fct to help finding lots
 ###
@@ -140,7 +139,7 @@ def findOffset(apns, method=min):
         offsets[apn] = method(v.timestamp for v in vals)
     return offsets
 
-def levelTimestamps(apns: dict, method=min) -> dict:
+def levelTimestamps(apns: dict, method=max) -> dict:
     """
     Map timestamps to 0..
     methods:
@@ -222,6 +221,10 @@ def readCSV(csv_path: str) -> list:
             # pass the first line
             if not passHeader:
                 passHeader = True
+                continue
+
+            # prevent empty lines
+            if len(row) == 0:
                 continue
 
             # Convert data in a more writable way
