@@ -1,12 +1,17 @@
-from functools import wraps
-from collections import UserDict
+#!/usr/bin/python3
+# coding: utf-8
+
 import os.path
 import json
+from functools import wraps
+from collections import UserDict
 
 
 def ensure_dir(d):
+    """ Ensure d exist and if not create it """
     if not os.path.exists(d):
         os.makedirs(d)
+
 
 def singleton(cls):
     """make the class as singleton"""
@@ -22,8 +27,9 @@ def singleton(cls):
 
     return fct
 
+
 class Config(UserDict):
-    """A class which contain all the configuration"""
+    """ A class which contain all the configuration """
     def __init__(self, configFile: str = 'config/main.json'):
         super().__init__()
         self.configFile = configFile
@@ -36,14 +42,18 @@ class Config(UserDict):
     def reloadConfigFile(self):
         self._fetchConfig()
 
+
 def select_arg(active, disable):
+    """ "Return True if active and False if disable """
     if disable:
         return False
     elif active:
         return True
     return None
 
+
 def convert_args(args, name, invert=False):
+    """ Convert Args ? """
     if invert:
         return select_arg(args['--' + name], args['--no-' + name])
     else:

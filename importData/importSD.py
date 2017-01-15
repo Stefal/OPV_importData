@@ -1,3 +1,6 @@
+#!/usr/bin/python3
+# coding: utf-8
+
 import json
 import pyudev
 import threading
@@ -71,7 +74,7 @@ class APN_copy(threading.Thread):
 
         print("Starting to clear APN", self.apn_conf['APN_num'])
         try:
-            #subprocess.run(['sudo', 'dd', 'if=' + iso, 'of=' + self.parent_devname])
+            # subprocess.run(['sudo', 'dd', 'if=' + iso, 'of=' + self.parent_devname])
             pass
         except subprocess.CalledProcessError:
             ex = False
@@ -168,14 +171,15 @@ class Main:
     def init(self, campaign, conf):
         self.campaign = campaign
         self.config = conf
+        self.pictInfoLocation = self.config['csv-path']
 
-        self.pictInfoLocation = ""
-
-        # get pictInfoLocation
-        while self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
-            self.pictInfoLocation = input("Enter path where is located pictInfo on this PC (or 0 for fetching with scp): ")
-
-        print(self.config.get('data-dir'))
+        # get pictInfoLocation if None
+        if not self.pictInfoLocation:
+            while self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
+                self.pictInfoLocation = input("Enter path where is located pictInfo on this PC (or 0 for fetching with scp): ")
+        print("... CSV path : %s" % (self.pictInfoLocation))
+        print("... Campaign : %s" % (self.campaign))
+        print("... Let's work on : %s" % (self.config.get('data-dir')))
 
         pictInfoDir = self.config.get('data-dir')
         pictInfoDir = os.path.expanduser(pictInfoDir.format(campaign=campaign))
@@ -241,6 +245,7 @@ class Main:
     def stop(self):
         self.lock.set()
         WaitForSDCard().stop()
+
 
 @singleton
 class WaitForSDCard:

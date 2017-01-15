@@ -1,15 +1,19 @@
+#!/usr/bin/python3
+# coding: utf-8
+
 import managedb
 import filemanager
 import datetime
 
-def treat(campaign, l):
 
+def treat(campaign, l):
+    """ Push hard in DB and return lot"""
     try:
         sensorsData = l['csv'].data
     except KeyError:
         sensorsData = {'gps': {'lat': 0, 'lon': 0, 'alt': 0},
                        'compass': {'degree': 0, 'minutes': 0},
-                      'takenDate': 0,
+                       'takenDate': 0,
                        'goproFailed': 0}
 
     sensors = managedb.make_sensors(sensorsData['gps']['lat'],

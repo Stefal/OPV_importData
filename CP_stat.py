@@ -4,6 +4,7 @@ import sys
 import numpy as np
 from math import acos, cos, sin, atan, tan, pi, radians, sqrt
 
+
 def main():
     try:
         ifs = ifstream(sys.argv[1])
@@ -13,7 +14,6 @@ def main():
 
     p = Panorama()
     p.readData(ifs)
-
 
     cpv = p.getCtrlPoints()
 
