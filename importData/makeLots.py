@@ -9,6 +9,7 @@ import time
 import datetime
 import exifread
 
+from pprint import pprint
 ###
 # Logging utilities
 ###
@@ -127,7 +128,7 @@ def sortAPNByTimestamp(apns, reverse=False):
 
     return apnSorted
 
-def findOffset(apns, method=min):
+def findOffset(apns, method=max):
     """
     Find the first valable offset
     There is multiple methods:
@@ -154,6 +155,7 @@ def levelTimestamps(apns: dict, method=max) -> dict:
 
         for k in apns.keys():
             for v in apns[k]:
+                # print("levelTimestamps -- k = ", k, " v = ", v)
                 n_apns[k].append(v._replace(timestamp=v.timestamp - offsets[k]))
     return n_apns
 
@@ -179,12 +181,20 @@ def makeLots(srcDir: str, csvFile: str) -> list:
     # less than 6 sec of interval
     # to make a lot, if no photo found,
     # the lot is incomplet but can be created
-    while True:
+    last_datasize = None
+    while last_datasize is None or sum([len(x) for x in data.values()]) < last_datasize:  # data are consumed
+        last_datasize = sum([len(x) for x in data.values()])
+
         # The part of the data we will treat (maybe a lot)
         p = {k: v[0].timestamp for k, v in data.items() if len(v)}
 
         if len(p) == 0:  # == if data is empty => no more values to treat
             break
+
+        if "csv" in p.keys() and data['csv'][0].data['goproFailed'] == 111111:  # all gopro failed
+            logger.debug("Removing CSV entry")
+            del data["csv"][0]
+            continue
 
         min_val = min(p.values())
 

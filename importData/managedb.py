@@ -21,13 +21,13 @@ def make_lot(campaign, pictures_path, sensors, goprofailed, takenDate, tile=None
     lot.save()
     return lot
 
-def make_sensors(gps_lat, gps_lon, gps_alt, compass_deg, compass_min):
+def make_sensors(alt, lng, lat, degrees, minutes):
     sensors = client.Sensors()
-    sensors.gps_alt = gps_alt
-    sensors.gps_lat = gps_lat
-    sensors.gps_lon = gps_lon
-    sensors.compass_deg = compass_deg
-    sensors.compass_min = compass_min
+    sensors.alt = alt
+    sensors.lat = lat
+    sensors.lng = lng
+    sensors.degrees = degrees
+    sensors.minutes = minutes
     sensors.save()
     return sensors
 
