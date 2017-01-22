@@ -4,7 +4,6 @@
 import re
 import csv
 from collections import namedtuple, defaultdict
-import re
 
 from path import path
 from os import walk
@@ -14,13 +13,9 @@ import logging
 import datetime
 import exifread
 
-from collections import namedtuple, defaultdict
-
-from pprint import pprint
 ###
 # Logging utilities
 ###
-import logging
 
 logger = logging.getLogger("makelots")
 logger.setLevel(logging.DEBUG)
@@ -132,12 +127,9 @@ def getImgsDataBis(srcDir: str):
 ###
 
 
-def sortAPNByTimestamp(apns, reverse=False):
+def sortAPNByTimestamp(apns, reverse=True):
     """Sort all data by timestamp"""
-    apnSorted = {apn: sorted(vals, key=lambda x: x.timestamp) for apn, vals in apns.items()}
-
-    if reverse:
-        apnSorted = apnSorted[::-1]
+    apnSorted = {apn: sorted(vals, key=lambda x: x.timestamp, reverse=reverse) for apn, vals in apns.items()}
 
     return apnSorted
 
@@ -150,7 +142,8 @@ def findOffset(apns, method=max):
     """
     offsets = {}
     for apn, vals in apns.items():
-        offsets[apn] = method(v.timestamp for v in vals)
+        if vals:
+            offsets[apn] = method(v.timestamp for v in vals)
     return offsets
 
 
@@ -195,9 +188,9 @@ def makeLots(srcDir: str, csvFile: str) -> list:
     # less than 6 sec of interval
     # to make a lot, if no photo found,
     # the lot is incomplet but can be created
-    last_datasize = None
-    while last_datasize is None or sum([len(x) for x in data.values()]) < last_datasize:  # data are consumed
-        last_datasize = sum([len(x) for x in data.values()])
+    changed_data = True
+    while changed_data:
+        changed_data = False
 
         # The part of the data we will treat (maybe a lot)
         p = {k: v[0].timestamp for k, v in data.items() if len(v)}
@@ -208,6 +201,7 @@ def makeLots(srcDir: str, csvFile: str) -> list:
         if "csv" in p.keys() and data['csv'][0].data['goproFailed'] == 111111:  # all gopro failed
             logger.debug("Removing CSV entry")
             del data["csv"][0]
+            changed_data = True
             continue
 
         min_val = min(p.values())
@@ -217,10 +211,13 @@ def makeLots(srcDir: str, csvFile: str) -> list:
 
         if len(keys) == 1 and keys[0] == 'csv':  # prevent timing errors on gopros pictures meta
             data = levelTimestamps(data)
+            data["csv"].pop()
+            changed_data = True
             continue
 
         lot = {}
         for k in keys:
+            changed_data = True
             lot[k] = data[k][0]
             del data[k][0]
 
