@@ -1,6 +1,6 @@
 {
     "data-dir" : "~/opv/rederbro/{campaign}/",
-    "pi-location": "pi@192.168.42.1:/home/pi/opv/lastPictureInfo.csv",
+    "pi-location": "pi@192.168.42.1:/home/pi/OpenPathView_wip/picturesInfo.csv",
     "ISO" : "~/opv/iso/goPro.iso",
     "clean-sd": false,
     "import": true,

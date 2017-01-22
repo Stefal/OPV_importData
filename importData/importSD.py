@@ -171,11 +171,11 @@ class Main:
     def init(self, campaign, conf):
         self.campaign = campaign
         self.config = conf
-        self.pictInfoLocation = self.config['csv-path']
+        self.pictInfoLocation = self.config.get('csv-path', None)
 
         # get pictInfoLocation if None
         if not self.pictInfoLocation:
-            while self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
+            while not self.pictInfoLocation or self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
                 self.pictInfoLocation = input("Enter path where is located pictInfo on this PC (or 0 for fetching with scp): ")
         print("... CSV path : %s" % (self.pictInfoLocation))
         print("... Campaign : %s" % (self.campaign))
@@ -218,11 +218,10 @@ class Main:
         """
         ex = True
         try:
-            with self.config.get('data-dir', 'pi-location') as (piLocation,):
-                subprocess.call(["scp", piLocation, dest])
-
+            piLocation = self.config['pi-location']
+            subprocess.call(["scp", piLocation, dest])
         except KeyError:
-            print("Please check data_dir and pi_location on the json file")
+            print("Please check and pi_location on the json file")
             ex = False
         except subprocess.CalledProcessError:
             ex = False

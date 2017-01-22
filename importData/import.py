@@ -3,7 +3,7 @@
 
 """Import the data into the treatment chain
 Usage:
-    ./import.py [options] <campaign> --csv-path=/home/Ben/OPV/pictureInfo.csv
+    ./import.py [options] <campaign>
 
 Arguments:
     campaign              The name of the campaign to import
