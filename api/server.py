@@ -66,7 +66,7 @@ class Cp(db.Model):
     search_algo_version = db.Column(db.String(20), nullable=False)
     nb_cp = db.Column(db.Integer, nullable=False)
     stichable = db.Column(db.Boolean, nullable=False)
-    optimized = db.Comlumn(db.Boolean)
+    optimized = db.Column(db.Boolean)
 
     id_lot = db.Column(db.Integer, db.ForeignKey('lot.id_lot'), nullable=False)
     lot = db.relationship(Lot, backref=backref('cps', lazy='dynamic'))
