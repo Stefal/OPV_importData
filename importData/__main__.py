@@ -36,7 +36,7 @@ from .importSD import Main
 from .makeLots import makeLots
 from .utils import Config, convert_args
 
-from path import path
+from path import Path
 from docopt import docopt
 
 from opv_directorymanagerclient import DirectoryManagerClient, Protocol
@@ -95,8 +95,8 @@ def main():
     # We need to improve this
     # Case 1 : we pass the Arguments
     # Case 2 : Go get the file on rederbro
-    srcDir = path(conf["data-dir"].format(campaign=conf.get('campaign'))).expand()
-    csvFile = path(srcDir) / "pictureInfo.csv"
+    srcDir = Path(conf["data-dir"].format(campaign=conf.get('campaign'))).expand()
+    csvFile = Path(srcDir) / "pictureInfo.csv"
 
     if conf.get('import'):
         logger.info("Get data from SD card ...")

@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # coding: utf-8
 
-from path import path
+from path import Path
 from potion_client import Client
 
 from .utils import ensure_dir
@@ -17,6 +17,6 @@ def addFiles(lot):
     ensure_dir(f.path)
 
     for key, photo in lot.items():
-        photo.path.copy(path(f.path) / 'APN{}{}'.format(key, photo.path.ext))
+        photo.path.copy(Path(f.path) / 'APN{}{}'.format(key, photo.path.ext))
 
     return f.id

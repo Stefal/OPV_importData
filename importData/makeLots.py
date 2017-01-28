@@ -5,7 +5,7 @@ import re
 import csv
 from collections import namedtuple, defaultdict
 
-from path import path
+from path import Path
 from os import walk
 
 import time
@@ -61,7 +61,7 @@ def listImgsByAPN(srcDir: str) -> dict:
     imgListByApn = defaultdict(list)
 
     for dirpath, _, filenames in walk(srcDir):
-        if isAPN(path(dirpath).basename()):
+        if isAPN(Path(dirpath).basename()):
             # imgListByApn[dirpath] = list(filter(isJpg, filenames))
             imgListByApn[dirpath] = [f for f in filenames if isJpg(f)]
 
@@ -73,7 +73,7 @@ def listImgsByAPN(srcDir: str) -> dict:
 
 
 def getImgData(p: str) -> Photo:
-    return Photo(readEXIFTime(p), path(p))
+    return Photo(readEXIFTime(p), Path(p))
 
 
 def getImgsData(srcDir: str) -> dict:
@@ -86,9 +86,9 @@ def getImgsData(srcDir: str) -> dict:
 
     for dirpath, listImg in d.items():
         for imgName in listImg:
-            imgPath = path(dirpath) / imgName
+            imgPath = Path(dirpath) / imgName
             # extract the apn number from the last segment of dirpath (APN0, 1...)
-            apnNo = int(re.search(r"\d+", path(dirpath).basename()).group(0))
+            apnNo = int(re.search(r"\d+", Path(dirpath).basename()).group(0))
 
             imgData[apnNo].append(getImgData(imgPath))
     return imgData
@@ -104,10 +104,10 @@ def getImgsDataBis(srcDir: str):
 
     for dirpath, listImg in d.items():
         # extract the apn number from the last segment of dirpath (APN0, 1...)
-        apnNo = int(re.search(r"\d+", path(dirpath).basename()).group(0))
+        apnNo = int(re.search(r"\d+", Path(dirpath).basename()).group(0))
 
         for imgName in listImg:
-            imgPath = path(dirpath) / imgName
+            imgPath = Path(dirpath) / imgName
             imgData[apnNo].append(getImgData(imgPath))
 
     return imgData
