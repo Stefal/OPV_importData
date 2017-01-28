@@ -1,13 +1,8 @@
-amqp==2.1.4
-aniso8601==1.2.0
-billiard==3.5.0.2
-blinker==1.4
-celery==4.0.2
-click==6.6
+pytest==3.0.6
+celery[redis]
 docopt==0.6.2
 ExifRead==2.1.2
-Flask==0.11.1
-Flask-Potion==0.12.7
+Flask-Potion==0.13.0
 Flask-SQLAlchemy==2.1
 ftputil==3.3.1
 httpie==0.9.9

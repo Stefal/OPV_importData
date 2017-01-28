@@ -1,2 +1,6 @@
-tests:
-        nosetests -v --with-coverage --cover-erase
+pytest: 
+	pytest
+
+tests: pytest
+
+# vim: noexpandtab filetype=make
