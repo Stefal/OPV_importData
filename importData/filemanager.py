@@ -3,7 +3,8 @@
 
 from path import path
 from potion_client import Client
-from utils import ensure_dir
+
+from .utils import ensure_dir
 
 client = Client("http://localhost:5001")
 

@@ -12,7 +12,7 @@ from shutil import copyfile
 from time import sleep
 from path import path
 
-from utils import singleton, ensure_dir
+from .utils import singleton, ensure_dir
 
 logger = logging.getLogger(__name__)
 

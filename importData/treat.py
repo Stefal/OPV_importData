@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 # coding: utf-8
 
-import managedb
-import filemanager
+from . import managedb
+from . import filemanager
 import datetime
 import logging
 

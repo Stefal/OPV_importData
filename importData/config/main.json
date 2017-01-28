@@ -5,6 +5,7 @@
     "clean-sd": false,
     "import": true,
     "treat": true,
+    "export": false,
     "id-rederbro": 1,
     "lots-output-dir": "~/opv/lots/{campaign}"
 }
