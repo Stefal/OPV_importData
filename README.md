@@ -16,8 +16,6 @@ Scripts that import data from our backpack, make data sets with metas (GPS, orie
 `./setup.py install` or, if you're developing on it, `./setup.py develop`
 
 ## Launch
-### First the filemanger server
-`python filemanager/server.py run --storage-location=/home/tom/Documents/OPV/batchPanoMaker/temp`
 ### Then the api server
 `python api/server.py run`
 ### Then launch the import from importData dir
@@ -28,31 +26,6 @@ This software is now composed of three components:
  * A filemanager server - a simple server that allow to make a link between unique ID and directory, will quickly be remplaced by [a more complete solution](https://github.com/OpenPathView/DirectoryManager/). See into filemanager.
  * An API server - a simple REST server that expose a DB. See into api/.
  * The import data script - a script that import data from sd-cards, make lots and exports all data into the DB through the api and the filemanager.
-
-### Filemanager
-The server is listening on port 5001.
-#### Usage
-I use [httpie](https://httpie.org/) here.
-Get an ID and a path:
-`http POST :5001/file`
-Returns:
-```json
-{
-   "$uri": "/file/1",
-   "path": "/tmp/1"
-}
-```
-Get the path from the ID (by exemple ID=1):
-`http GET :5001/file/1`
-Returns:
-```json
-{
-    "$uri": "/file/1",
-    "path": "/tmp/1"
-}
-```
-Some content for more easy debugging:
-- stop the server (only if --debug is precised while launching the server): `http POST :5000/shutdown`
 
 ### API
 It's a server located on port 5000
