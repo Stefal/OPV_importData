@@ -48,7 +48,7 @@ class Sensors(db.Model):
 
 class Lot(db.Model):
     id_lot = db.Column(db.Integer, primary_key=True)
-    pictures_path = db.Column(db.Integer, nullable=False)
+    pictures_path = db.Column(db.String(100), nullable=False)
     goprofailed = db.Column(db.Integer, nullable=False)
     takenDate = db.Column(db.DateTime, nullable=False)
 
@@ -73,15 +73,15 @@ class Cp(db.Model):
 
 class Panorama(db.Model):
     id_panorama = db.Column(db.Integer, primary_key=True)
-    equirectangular_path = db.Column(db.Integer)
+    equirectangular_path = db.Column(db.String(100))
 
     id_cp = db.Column(db.Integer, db.ForeignKey('cp.id_cp'), nullable=False)
     cp = db.relationship(Cp, backref=backref('panorama', lazy='dynamic'))
 
 class Tile(db.Model):
     id_tile = db.Column(db.Integer, primary_key=True)
-    param_location = db.Column(db.Integer, nullable=False)
-    fallback_path = db.Column(db.Integer, nullable=False)
+    param_location = db.Column(db.String(100), nullable=False)
+    fallback_path = db.Column(db.String(100), nullable=False)
     extension = db.Column(db.String(5), nullable=False)
     resolution = db.Column(db.Integer, nullable=False)
     max_level = db.Column(db.Integer, nullable=False)
