@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
+#!/usr/bin/python3
+# coding: utf-8
 
 """Import the data into the treatment chain
 Usage:
@@ -25,8 +24,9 @@ Options:
     --lots-output-dir=<str>   Where created lots may be placed
     --id-rederbro=<str>   Id of the rederbro use fot the campaign
     --description=<str>   Description of the campaign
+    --dir-manager-uri=<str> URI of the DirectoryManager (default: 'http://localhost:5001')
 """
-
+import logging
 import task
 import managedb
 
@@ -36,6 +36,8 @@ from docopt import docopt
 from importSD import Main
 from makeLots import makeLots
 from utils import Config, convert_args
+
+from opv_directorymanagerclient import DirectoryManagerClient, Protocol
 
 import logging
 
@@ -101,7 +103,8 @@ if __name__ == "__main__":
         logger.info("... Done ! Data recover.")
 
     if conf.get('treat'):
+        dir_manager_client = DirectoryManagerClient(api_base=conf['dir-manager-uri'], default_protocol=Protocol.FTP)
         for l in makeLots(srcDir, csvFile):
-            lot = treat(campaign, l)
+            lot = treat(campaign, l, dir_manager_client)
             # lot object can't be send through network
             task.assemble.delay(lot.id)

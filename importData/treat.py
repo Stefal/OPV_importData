@@ -7,8 +7,24 @@ import datetime
 import logging
 
 logger = logging.getLogger("importData." + __name__)
+from path import path
 
-def treat(campaign, l):
+def copyImages(lot, dir_manager_client):
+    """
+    Copy images using DirectoryManagerClient.
+    :param lot: A list of ('Csv':[], 0: '/tt/aa/APN0/IMG_00.JPG' ...)
+    :param dir_manager_client: A DirectoryManagerClient.
+    """
+    l = lot.copy()
+    l.pop('csv', None)
+
+    with dir_manager_client.Open() as (uuid, dir_path):
+        for key, photo in l.items():
+            photo.path.copy(path(dir_path) / 'APN{}{}'.format(key, photo.path.ext))
+
+    return uuid
+
+def treat(campaign, l, dir_manager_client):
     """ Push hard in DB and return lot"""
     try:
         sensorsData = l['csv'].data
@@ -24,17 +40,17 @@ def treat(campaign, l):
                                     sensorsData['compass']['degree'],
                                     sensorsData['compass']['minutes'])
 
-    pictures_path = filemanager.addFiles(l.copy())
+    uuid = copyImages(l, dir_manager_client)
 
     date = datetime.datetime.fromtimestamp(sensorsData['takenDate'])
     lot = managedb.make_lot(campaign,
-                            pictures_path,
+                            uuid,
                             sensors,
                             sensorsData['goproFailed'],
                             date)
 
     if len(l) != 7:
-        logger.warning("Malformed lot n°{}".format(lot.id))
-    logger.info("Lot n°{} generated".format(lot.id))
+        logging.info("Malformed lot n°{}".format(lot.id))
+    logging.info("Lot n°{} generated".format(lot.id))
 
     return lot
