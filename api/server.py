@@ -3,22 +3,24 @@
 """Api server and db
 
 Usage:
-  server.py run [--db-location=<str>]
+  server.py run [--db-location=<str>] [--debug]
   server.py (-h | --help)
 
 Options:
   -h --help             Show this screen.
   --db-location=<path>  Set the database location (e.g sqlite:////tmp/test.db) [default: in-memory].
-
+  --debug               Allow to stop the server on /shutdown
 """
 
 from docopt import docopt
 
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import backref
 from flask_potion.routes import Relation
 from flask_potion import Api, fields, ModelResource
+
+debug = False
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -150,6 +152,19 @@ api.add_resource(LotRessource)
 api.add_resource(SensorsRessource)
 api.add_resource(CampaignRessource)
 
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    if debug:
+        shutdown_server()
+        return 'Server shutting down...'
+    return "You can't shut the server down"
+
 def makeAndRun(db_location):
     if db_location and db_location != "in-memory":
         app.config['SQLALCHEMY_DATABASE_URI'] = db_location
@@ -159,4 +174,5 @@ def makeAndRun(db_location):
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
+    debug = bool(arguments.get('--debug'))
     makeAndRun(arguments['--db-location'])

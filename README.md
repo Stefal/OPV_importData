@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/naegi/batchPanoMaker.svg?branch=master)](https://travis-ci.org/naegi/batchPanoMaker)
+
 # Batch Pano Maker
 Scripts that import data from our backpack, make data sets with metas (GPS, orientation ....) and stitch all panoramas.
 
@@ -10,14 +12,14 @@ Scripts that import data from our backpack, make data sets with metas (GPS, orie
 `. mon_env/bin/activate`
 ### Install all dependencies
 `pip install -r requirements.txt`
+### Install importData
+`./setup.py install` or, if you're developing on it, `./setup.py develop`
 
 ## Launch
-### First the filemanger server
-`python filemanager/server.py run --storage-location=/home/tom/Documents/OPV/batchPanoMaker/temp`
 ### Then the api server
 `python api/server.py run`
 ### Then launch the import from importData dir
-`python import.py capucin --csv-path=/home/tom/Documents/OPV/batchPanoMaker/importData/picturesInfo.csv`
+`opv-import capucin --csv-path=/home/tom/Documents/OPV/batchPanoMaker/importData/picturesInfo.csv`
 
 ## Architecture
 This software is now composed of three components:
@@ -25,35 +27,15 @@ This software is now composed of three components:
  * An API server - a simple REST server that expose a DB. See into api/.
  * The import data script - a script that import data from sd-cards, make lots and exports all data into the DB through the api and the filemanager.
 
-### Filemanager
-The server is listening on port 5001.
-#### Usage
-I use [httpie](https://httpie.org/) here.
-Get an ID and a path:
-`http POST :5001/file`
-Returns:
-```json
-{
-   "$uri": "/file/1",
-   "path": "/tmp/1"
-}
-```
-Get the path from the ID (by exemple ID=1):
-`http GET :5001/file/1`
-Returns:
-```json
-{
-    "$uri": "/file/1",
-    "path": "/tmp/1"
-}
-```
 ### API
+It's a server located on port 5000
 The API server implement this database:
 ![Database](https://raw.githubusercontent.com/OpenPathView/batchPanoMaker/master/doc/database/main_db.png)
 And some content for more easy debugging:
 - get all lots of an campaign (here campaign ID=1): `httpie GET :5000/campaign/1/lots`
 - get all cp of a lot (here lot ID=1): `httpie GET :5000/lot/1/cps`
 - get all tiles of a panorama (here panorama ID=1): `httpie GET :5000/panorama/1/tiles`
+- stop the server (only if --debug is precised while launching the server): `http POST :5000/shutdown`
 
 
 ### Import data script
@@ -65,6 +47,7 @@ There are also statics options in batchPanoMaker/importData/config/main.json
 - ISO - default: ~/opv/iso/goPro.iso" - Where is the iso of an empty sd-card. Unutilized when clean-sd is false.
 - clean-sd - default: false - Remove files from the sd-card (do a dd). Commented for the moment.
 - import - default: true - Import files from sd-card
+- export - default: true - Send lots into the celery queue
 - treat - default: true - Make lots from data
 - id-rederbro - default: 1 - The id of the rederbro
 - lots-output-dir - default: ~/opv/lots/{campaign} - Where lots should be stored.

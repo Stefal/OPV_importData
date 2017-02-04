@@ -3,7 +3,7 @@
 
 """Import the data into the treatment chain
 Usage:
-    ./import.py [options] <campaign>
+    opv-import [options] <campaign>
 
 Arguments:
     campaign              The name of the campaign to import
@@ -15,9 +15,12 @@ Options:
                             This need sudo rights and you may loose
                             the content of the SD card if something fail !
                           /!\\
+    --config-file=<str>   The path to the config file.[default: ./config/main.json]
     --clean-sd            Do NOT clean SD after copying.
     --no-treat            Don't treat files
     --treat               Treat files
+    --export              Send files to the celery queue
+    --no-export           Don't send files to the celery queue
     --import              Import files
     --no-import           Don't import files
     --data-dir=<str>      Where should be placed file imported from SD
@@ -26,16 +29,15 @@ Options:
     --description=<str>   Description of the campaign
     --dir-manager-uri=<str> URI of the DirectoryManager (default: 'http://localhost:5001')
 """
-import logging
-import task
-import managedb
+from . import task
+from . import managedb
+from .treat import treat
+from .importSD import Main
+from .makeLots import makeLots
+from .utils import Config, convert_args
 
-from path import path
-from treat import treat
+from path import Path
 from docopt import docopt
-from importSD import Main
-from makeLots import makeLots
-from utils import Config, convert_args
 
 from opv_directorymanagerclient import DirectoryManagerClient, Protocol
 
@@ -62,16 +64,16 @@ rootLogger.setLevel(logging.DEBUG)
 
 logger = logging.getLogger('importData.' + __name__)
 
-if __name__ == "__main__":
+def main():
     """ Import Images from SD """
     # Read the __doc__ and build the Arguments
     args = docopt(__doc__)
     f_args = dict()
 
     # Convert args
-    for n in ['clean-sd', 'import', 'treat']:
+    for n in ['clean-sd', 'import', 'treat', 'export']:
         f_args[n] = convert_args(args, n, True)
-    for n in ['data-dir', 'lots-output-dir', 'id-rederbro', 'description', 'csv-path']:
+    for n in ['dir-manager-uri', 'config-file', 'data-dir', 'lots-output-dir', 'id-rederbro', 'description', 'csv-path']:
         f_args[n] = convert_args(args, n)
     f_args['campaign'] = args['<campaign>']
 
@@ -82,20 +84,19 @@ if __name__ == "__main__":
     # !!!!!!!
     # To change : not absolute path
     # !!!!!!!
-    conf = Config('config/main.json')
+    conf = Config(f_args.pop('config-file'))
     conf.update(f_args)
 
     logger.info("=================================================")
     logger.info("===== Let's import the image from SD card =======")
 
     campaign = managedb.make_campaign(conf['campaign'], conf['id-rederbro'], conf.get('description'))
-    lots = []
 
     # We need to improve this
     # Case 1 : we pass the Arguments
     # Case 2 : Go get the file on rederbro
-    srcDir = path(conf["data-dir"].format(campaign=conf.get('campaign'))).expand()
-    csvFile = path(srcDir) / "pictureInfo.csv"
+    srcDir = Path(conf["data-dir"].format(campaign=conf.get('campaign'))).expand()
+    csvFile = Path(srcDir) / "pictureInfo.csv"
 
     if conf.get('import'):
         logger.info("Get data from SD card ...")
@@ -107,4 +108,9 @@ if __name__ == "__main__":
         for l in makeLots(srcDir, csvFile):
             lot = treat(campaign, l, dir_manager_client)
             # lot object can't be send through network
-            task.assemble.delay(lot.id)
+            if conf.get('export'):
+                task.assemble.delay(lot.id)
+
+
+if __name__ == "__main__":
+    main()

@@ -30,7 +30,7 @@ def singleton(cls):
 
 class Config(UserDict):
     """ A class which contain all the configuration """
-    def __init__(self, configFile: str = 'config/main.json'):
+    def __init__(self, configFile: str = None):
         super().__init__()
         self.configFile = configFile
         self._fetchConfig()

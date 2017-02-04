@@ -1,13 +1,12 @@
 #!/usr/bin/python3
 # coding: utf-8
 
-import managedb
-import filemanager
+from . import managedb
 import datetime
 import logging
 
 logger = logging.getLogger("importData." + __name__)
-from path import path
+from path import Path
 
 def copyImages(lot, dir_manager_client):
     """
@@ -20,7 +19,7 @@ def copyImages(lot, dir_manager_client):
 
     with dir_manager_client.Open() as (uuid, dir_path):
         for key, photo in l.items():
-            photo.path.copy(path(dir_path) / 'APN{}{}'.format(key, photo.path.ext))
+            photo.path.copy(Path(dir_path) / 'APN{}{}'.format(key, photo.path.ext))
 
     return uuid
 
