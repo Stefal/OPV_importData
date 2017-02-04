@@ -24,7 +24,9 @@ Options:
     --lots-output-dir=<str>   Where created lots may be placed
     --id-rederbro=<str>   Id of the rederbro use fot the campaign
     --description=<str>   Description of the campaign
+    --dir-manager-uri=<str> URI of the DirectoryManager (default: 'http://localhost:5001')
 """
+import logging
 import task
 import managedb
 
@@ -35,9 +37,13 @@ from importSD import Main
 from makeLots import makeLots
 from utils import Config, convert_args
 
+from opv_directorymanagerclient import DirectoryManagerClient, Protocol
+
 
 if __name__ == "__main__":
     """ Import Images from SD """
+    logging.getLogger().setLevel(logging.DEBUG)
+
     # Read the __doc__ and build the Arguments
     args = docopt(__doc__)
     f_args = dict()
@@ -77,7 +83,8 @@ if __name__ == "__main__":
         print("... Done ! Data recover.")
 
     if conf.get('treat'):
+        dir_manager_client = DirectoryManagerClient(api_base=conf['dir-manager-uri'], default_protocol=Protocol.FTP)
         for l in makeLots(srcDir, csvFile):
-            lot = treat(campaign, l)
+            lot = treat(campaign, l, dir_manager_client)
             # lot object can't be send through network
             task.assemble.delay(lot.id)
