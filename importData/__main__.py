@@ -19,8 +19,8 @@ Options:
     --clean-sd            Do NOT clean SD after copying.
     --no-treat            Don't treat files
     --treat               Treat files
-    --export              Send files to the celery queue
-    --no-export           Don't send files to the celery queue
+    --export              Send files to the task queue
+    --no-export           Don't send files to the task queue
     --import              Import files
     --no-import           Don't import files
     --data-dir=<str>      Where should be placed file imported from SD
@@ -29,7 +29,6 @@ Options:
     --description=<str>   Description of the campaign
     --dir-manager-uri=<str> URI of the DirectoryManager (default: 'http://localhost:5001')
 """
-from . import task
 from . import managedb
 from .treat import treat
 from .importSD import Main
@@ -108,8 +107,8 @@ def main():
         for l in makeLots(srcDir, csvFile):
             lot = treat(campaign, l, dir_manager_client)
             # lot object can't be send through network
-            if conf.get('export'):
-                task.assemble.delay(lot.id)
+            if conf.get('export'): # send to task queue
+                pass
 
 
 if __name__ == "__main__":

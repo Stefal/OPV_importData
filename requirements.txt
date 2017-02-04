@@ -1,14 +1,8 @@
 pytest==3.0.6
-celery[redis]
 docopt==0.6.2
 ExifRead==2.1.2
-Flask-Potion==0.13.0
-Flask-SQLAlchemy==2.1
-ftputil==3.3.1
 httpie==0.9.9
 path.py==10.1
 Potion-client==2.5.0
 -e git+https://github.com/OpenPathView/DirectoryManagerClient@07e45ea49f5546e64a8d355b10373b7209268c8f#egg=opv_directorymanagerclient
 pyudev==0.21.0
-redis==2.10.5
-SQLAlchemy==1.1.5
