@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/naegi/batchPanoMaker.svg?branch=master)](https://travis-ci.org/naegi/batchPanoMaker)
+[![Build Status](https://travis-ci.org/OpenPathView/batchPanoMaker.svg?branch=master)](https://travis-ci.org/OpenPathView/batchPanoMaker)
 
 # Batch Pano Maker
 Scripts that import data from our backpack, make data sets with metas (GPS, orientation ....) and stitch all panoramas.
