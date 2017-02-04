@@ -4,7 +4,9 @@
 import managedb
 import filemanager
 import datetime
+import logging
 
+logger = logging.getLogger("importData." + __name__)
 
 def treat(campaign, l):
     """ Push hard in DB and return lot"""
@@ -32,7 +34,7 @@ def treat(campaign, l):
                             date)
 
     if len(l) != 7:
-        print("Malformed lot n°{}".format(lot.id))
-    print("Lot n°{} generated".format(lot.id))
+        logger.warning("Malformed lot n°{}".format(lot.id))
+    logger.info("Lot n°{} generated".format(lot.id))
 
     return lot

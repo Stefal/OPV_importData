@@ -13,19 +13,8 @@ import logging
 import datetime
 import exifread
 
-###
-# Logging utilities
-###
+logger = logging.getLogger("importData." +  __name__)
 
-logger = logging.getLogger("makelots")
-logger.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
-
-# Will log on the terminal
-steam_handler = logging.StreamHandler()
-steam_handler.setLevel(logging.DEBUG)
-logger.addHandler(steam_handler)
 
 ###
 # Data Structures
@@ -57,7 +46,7 @@ def listImgsByAPN(srcDir: str) -> dict:
     """
     return the list of all images in srcDir and sort them by APN
     """
-    logger.debug("Start listing images")
+    logger.info("Start listing images")
     r = re.compile('APN[0-9]+')
     j = re.compile('.+\.(jpeg|jpg)', re.IGNORECASE)
 
@@ -79,7 +68,7 @@ def listImgsByAPN(srcDir: str) -> dict:
             if len(imgListByApn[dirpath]) == 0:
                 logger.warning("No image founded in {}".format(dirpath))
 
-    logger.debug("All images listed")
+    logger.info("All images listed")
     return imgListByApn
 
 

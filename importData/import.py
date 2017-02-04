@@ -1,5 +1,6 @@
-#!/usr/bin/python3
-# coding: utf-8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 
 """Import the data into the treatment chain
 Usage:
@@ -25,6 +26,7 @@ Options:
     --id-rederbro=<str>   Id of the rederbro use fot the campaign
     --description=<str>   Description of the campaign
 """
+
 import task
 import managedb
 
@@ -35,6 +37,28 @@ from importSD import Main
 from makeLots import makeLots
 from utils import Config, convert_args
 
+import logging
+
+formatter_f = logging.Formatter('%(asctime)s %(name)-25s %(levelname)-8s %(message)s')
+formatter_c = logging.Formatter('%(name)-25s: %(levelname)-8s %(message)s')
+
+fh = logging.FileHandler('/tmp/importData.log')
+ch = logging.StreamHandler()
+
+ch.setFormatter(formatter_c)
+fh.setFormatter(formatter_f)
+
+ch.setLevel(logging.INFO)
+fh.setLevel(logging.DEBUG)
+
+rootLogger = logging.getLogger('importData')
+rootLogger.addHandler(ch)
+rootLogger.addHandler(fh)
+
+rootLogger.setLevel(logging.DEBUG)
+
+
+logger = logging.getLogger('importData.' + __name__)
 
 if __name__ == "__main__":
     """ Import Images from SD """
@@ -59,8 +83,8 @@ if __name__ == "__main__":
     conf = Config('config/main.json')
     conf.update(f_args)
 
-    print("=================================================")
-    print("===== Let's import the image from SD card =======")
+    logger.info("=================================================")
+    logger.info("===== Let's import the image from SD card =======")
 
     campaign = managedb.make_campaign(conf['campaign'], conf['id-rederbro'], conf.get('description'))
     lots = []
@@ -72,9 +96,9 @@ if __name__ == "__main__":
     csvFile = path(srcDir) / "pictureInfo.csv"
 
     if conf.get('import'):
-        print("Get data from SD card ...")
+        logger.info("Get data from SD card ...")
         Main().init(conf.get('campaign'), conf).start()
-        print("... Done ! Data recover.")
+        logger.info("... Done ! Data recover.")
 
     if conf.get('treat'):
         for l in makeLots(srcDir, csvFile):

@@ -6,14 +6,15 @@ import pyudev
 import threading
 import subprocess
 import os
+
+import logging
 from shutil import copyfile
-
 from time import sleep
-
 from path import path
 
 from utils import singleton, ensure_dir
 
+logger = logging.getLogger(__name__)
 
 class APN_copy(threading.Thread):
     """
@@ -26,7 +27,7 @@ class APN_copy(threading.Thread):
         self.start()
 
     def run(self):
-        print("APN_copy -- run ", self.devname)
+        logger.info("APN_copy -- run ", self.devname)
         # Boooooouuuuuhhh ugly
         sleep(1)  # wait 1 sec, waiting the system to setup device block file
 
@@ -46,7 +47,7 @@ class APN_copy(threading.Thread):
         success = success and self.doClearSD()
 
         if not success:
-            print("Tutute ! Erreur lors de la copie")
+            logger.warning("Tutute ! Erreur lors de la copie")
 
     def foundMountedPath(self):
         """
@@ -72,7 +73,7 @@ class APN_copy(threading.Thread):
 
         iso = os.path.expanduser(iso)
 
-        print("Starting to clear APN", self.apn_conf['APN_num'])
+        logger.info("Starting to clear APN", self.apn_conf['APN_num'])
         try:
             # subprocess.run(['sudo', 'dd', 'if=' + iso, 'of=' + self.parent_devname])
             pass
@@ -88,7 +89,7 @@ class APN_copy(threading.Thread):
                 with open(os.path.join(mountedpath, "APN_config"), "w") as apnConfFile:
                     json.dump(self.apn_conf, apnConfFile)
             self.unmount()
-        print("APN", self.apn_conf['APN_num'], "cleared")
+        logger.info("APN", self.apn_conf['APN_num'], "cleared")
 
         return ex
 
@@ -99,7 +100,7 @@ class APN_copy(threading.Thread):
             with open(path(src) / "APN_config", "r") as apnConfFile:
                 self.apn_conf = json.load(apnConfFile)
         except FileNotFoundError:  # if partition isn't OPV data partition
-            print("Error ! No APN_config file founded")
+            logging.error("Error ! No APN_config file founded")
             return False
 
         self.apn_n = self.apn_conf.get('APN_num', None)
@@ -118,19 +119,19 @@ class APN_copy(threading.Thread):
         try:
             apn_n = self.apn_conf['APN_num']  # read the APN number in config file
         except KeyError:
-            print("We don't know what is the number of APN, aborting")
+            logger.error("We don't know what is the number of APN, aborting")
             return False
         a = dataDir.format(campaign=Main().campaign)
         dest = path(a).expand() / "APN{}".format(apn_n)
 
         dest.makedirs_p()
 
-        print("Copying started from {} to {}".format(src, dest))
+        logger.info("Copying started from {} to {}".format(src, dest))
 
         for f in src.walkfiles('*.JPG'):
             f.copy(dest)
 
-        print("Copying finished from {} to {}".format(src, dest))
+        logger.info("Copying finished from {} to {}".format(src, dest))
         Main().APN_copied(apn_n)
 
         return ex
@@ -143,10 +144,10 @@ class APN_copy(threading.Thread):
         try:
             subprocess.call(['udisksctl', 'mount', '-b', self.devname])
         except subprocess.CalledProcessError:
-            print("{} not mounted".format(self.devname))
+            logger.error("{} not mounted".format(self.devname))
             return False
         except FileNotFoundError:
-            print("udisks not installed on system")
+            logger.error("udisks not installed on system")
             return False
         return True
 
@@ -157,9 +158,9 @@ class APN_copy(threading.Thread):
         try:
             subprocess.call(['udisksctl', 'unmount', '-b', self.devname])
         except subprocess.CalledProcessError:
-            print("{} not unmounted".format(self.devname))
+            logger.error("{} not unmounted".format(self.devname))
         except FileNotFoundError:
-            print("udisks not installed on system")
+            logger.error("udisks not installed on system")
 
 
 @singleton
@@ -177,9 +178,9 @@ class Main:
         if not self.pictInfoLocation:
             while not self.pictInfoLocation or self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
                 self.pictInfoLocation = input("Enter path where is located pictInfo on this PC (or 0 for fetching with scp): ")
-        print("... CSV path : %s" % (self.pictInfoLocation))
-        print("... Campaign : %s" % (self.campaign))
-        print("... Let's work on : %s" % (self.config.get('data-dir')))
+        logger.info("... CSV path : %s" % (self.pictInfoLocation))
+        logger.info("... Campaign : %s" % (self.campaign))
+        logger.info("... Let's work on : %s" % (self.config.get('data-dir')))
 
         pictInfoDir = self.config.get('data-dir')
         pictInfoDir = os.path.expanduser(pictInfoDir.format(campaign=campaign))
@@ -188,7 +189,7 @@ class Main:
 
         if self.pictInfoLocation == "0":
             if not self.getPictureInfoFromPi(dest):
-                print("Can't get picture info from pi")
+                logger.critical("Can't get picture info from pi")
         else:
             copyfile(self.pictInfoLocation, dest)
 
@@ -208,7 +209,7 @@ class Main:
             parent_devname = device.parent['DEVNAME']
         else:
             parent_devname = device['DEVNAME'][:-1]
-        print("APN_connected : ", devname, "--", parent_devname)
+        logger.info("APN_connected : ", devname, "--", parent_devname)
         APN_copy(devname, parent_devname)
 
     def getPictureInfoFromPi(self, dest):
@@ -221,7 +222,7 @@ class Main:
             piLocation = self.config['pi-location']
             subprocess.call(["scp", piLocation, dest])
         except KeyError:
-            print("Please check and pi_location on the json file")
+            logger.error("Please check and pi_location on the json file")
             ex = False
         except subprocess.CalledProcessError:
             ex = False
@@ -230,7 +231,8 @@ class Main:
 
     def start(self):
         if not self.campaign:
-            print('Any campaign specified')
+            logging.critical('Any campaign specified')
+            return
 
         self.lock.clear()
         WaitForSDCard().start()
