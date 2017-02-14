@@ -3,7 +3,15 @@
 
 from potion_client import Client
 
-client = Client('http://localhost:5000')
+client = None
+
+
+def make_client(api_uri='http://localhost:5000'):
+    """
+    Have to be called before any use of function from this file !
+    """
+    global client
+    client = Client(api_uri)
 
 
 def make_campaign(name, id_rederbro, description):

@@ -27,8 +27,10 @@ Options:
     --lots-output-dir=<str>   Where created lots may be placed
     --id-rederbro=<str>   Id of the rederbro use fot the campaign
     --description=<str>   Description of the campaign
-    --dir-manager-uri=<str> URI of the DirectoryManager (default: 'http://localhost:5001')
+    --dir-manager-uri=<str> URI of the DirectoryManager [default: http://localhost:5001]
+    --api-uri=<str>       URI of the DirectoryManager [default: http://localhost:5000]
 """
+
 from . import managedb
 from .treat import treat
 from .importSD import Main
@@ -72,7 +74,7 @@ def main():
     # Convert args
     for n in ['clean-sd', 'import', 'treat', 'export']:
         f_args[n] = convert_args(args, n, True)
-    for n in ['dir-manager-uri', 'config-file', 'data-dir', 'lots-output-dir', 'id-rederbro', 'description', 'csv-path']:
+    for n in ['api-uri', 'dir-manager-uri', 'config-file', 'data-dir', 'lots-output-dir', 'id-rederbro', 'description', 'csv-path']:
         f_args[n] = convert_args(args, n)
     f_args['campaign'] = args['<campaign>']
 
@@ -89,6 +91,7 @@ def main():
     logger.info("=================================================")
     logger.info("===== Let's import the image from SD card =======")
 
+    managedb.make_client(conf['api-uri'])
     campaign = managedb.make_campaign(conf['campaign'], conf['id-rederbro'], conf.get('description'))
 
     # We need to improve this
