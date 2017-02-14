@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/OpenPathView/batchPanoMaker.svg?branch=master)](https://travis-ci.org/OpenPathView/batchPanoMaker)
+[![Build Status](https://travis-ci.org/OpenPathView/OPV_importData.svg?branch=master)](https://travis-ci.org/OpenPathView/OPV_importData)
 
 # Batch Pano Maker
 Scripts that import data from our backpack, make data sets with metas (GPS, orientation ....) and stitch all panoramas.
@@ -19,7 +19,7 @@ Scripts that import data from our backpack, make data sets with metas (GPS, orie
 ### Then the api server
 `python api/server.py run`
 ### Then launch the import from importData dir
-`opv-import capucin --csv-path=/home/tom/Documents/OPV/batchPanoMaker/importData/picturesInfo.csv`
+`opv-import capucin --csv-path=/home/tom/Documents/OPV/OPV_importData/importData/picturesInfo.csv`
 
 ## Architecture
 This software is now composed of three components:
@@ -30,7 +30,7 @@ This software is now composed of three components:
 ### API
 It's a server located on port 5000
 The API server implement this database:
-![Database](https://raw.githubusercontent.com/OpenPathView/batchPanoMaker/master/doc/database/main_db.png)
+![Database](https://raw.githubusercontent.com/OpenPathView/OPV_importData/master/doc/database/main_db.png)
 And some content for more easy debugging:
 - get all lots of an campaign (here campaign ID=1): `httpie GET :5000/campaign/1/lots`
 - get all cp of a lot (here lot ID=1): `httpie GET :5000/lot/1/cps`
@@ -41,7 +41,7 @@ And some content for more easy debugging:
 ### Import data script
 This script imports, detect sd-card, mount them using udisks2 (udiskctl), copy all images to data dir and create lots.
 See `import.py --help` for options.
-There are also statics options in batchPanoMaker/importData/config/main.json
+There are also statics options in OPV_importData/importData/config/main.json
 - data-dir - default: ~/opv/rederbro/{campaign}/ - Where images from sd-cards are copied to.
 - pi-location - default : pi@192.168.42.1:/home/pi/opv/lastPictureInfo.csv" - Where pictureInfo (metas from rederbro backpack) should be grabbed.
 - ISO - default: ~/opv/iso/goPro.iso" - Where is the iso of an empty sd-card. Unutilized when clean-sd is false.
@@ -57,4 +57,4 @@ SD cards for GoPro cameras needs to be well formated. The only way to do that is
 To do so :
 - format your SD card in a GoPro camera
 - Make an ISO : `sudo dd if=/dev/sdb of=imgGoPro.img bs=10M count=1`
-- specify the path of this ISO in batchPanoMaker/importData/config/main.json
+- specify the path of this ISO in OPV_importData/importData/config/main.json

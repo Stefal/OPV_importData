@@ -13,7 +13,7 @@ setup(
     # install_requires= ,
     # Active la prise en compte du fichier MANIFEST.in
     include_package_data=True,
-    url='https://github.com/OpenPathView/batchPanoMaker',
+    url='https://github.com/OpenPathView/OPV_importData',
     entry_points={
         'console_scripts': [
             'opv-import = importData.__main__:main',
