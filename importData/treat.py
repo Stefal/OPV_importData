@@ -33,20 +33,20 @@ def treat(campaign, l, dir_manager_client):
                        'takenDate': 0,
                        'goproFailed': 0}
 
-    sensors = managedb.make_sensors(sensorsData['gps']['lat'],
-                                    sensorsData['gps']['lon'],
-                                    sensorsData['gps']['alt'],
-                                    sensorsData['compass']['degree'],
-                                    sensorsData['compass']['minutes'])
+    sensors = managedb.make_sensors(lng = sensorsData['gps']['lon'],
+                                    alt = sensorsData['gps']['alt'],
+                                    lat = sensorsData['gps']['lat'],
+                                    degree = sensorsData['compass']['degree'],
+                                    minutes = sensorsData['compass']['minutes'])
 
     uuid = copyImages(l, dir_manager_client)
 
     date = datetime.datetime.fromtimestamp(sensorsData['takenDate'])
-    lot = managedb.make_lot(campaign,
-                            uuid,
-                            sensors,
-                            sensorsData['goproFailed'],
-                            date)
+    lot = managedb.make_lot(campaign = campaign,
+                            picture_path = uuid,
+                            sensors = sensors,
+                            goprofailed = sensorsData['goproFailed'],
+                            takenDate = date)
 
     if len(l) != 7:
         logging.info("Malformed lot n°{}".format(lot.id))
