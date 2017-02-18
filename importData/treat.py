@@ -43,7 +43,7 @@ def treat(campaign, l, dir_manager_client):
 
     date = datetime.datetime.fromtimestamp(sensorsData['takenDate'])
     lot = managedb.make_lot(campaign = campaign,
-                            picture_path = uuid,
+                            pictures_path = uuid,
                             sensors = sensors,
                             goprofailed = sensorsData['goproFailed'],
                             takenDate = date)
