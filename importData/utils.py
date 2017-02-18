@@ -29,18 +29,25 @@ def singleton(cls):
 
 
 class Config(UserDict):
-    """ A class which contain all the configuration """
-    def __init__(self, configFile: str = None):
+    """ A class which contain all the configuration"""
+
+    """
+    Create a configuration object.
+    :param configFile: The path of a JSON configuration file.
+    :param configString: A JSON configuration string.
+    """
+    def __init__(self, configString: str = None):
         super().__init__()
-        self.configFile = configFile
-        self._fetchConfig()
+        if configString:
+            self.data = json.loads(configString)
 
-    def _fetchConfig(self):
-        with open(self.configFile, "r") as f:
-            self.data = json.load(f)
-
-    def reloadConfigFile(self):
-        self._fetchConfig()
+    """
+    Load configuration from JSON file (erase existing keys).
+    :param filePath: Path of the JSON file.
+    """
+    def loadConfigFile(self, filePath):
+        with open(filePath, "r") as f:
+            self.data.update(json.load(f))
 
 
 def select_arg(active, disable):

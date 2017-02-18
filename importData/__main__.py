@@ -15,7 +15,7 @@ Options:
                                     This need sudo rights and you may loose
                                     the content of the SD card if something fail !
                                 /!\\
-    --config-file=<str>         The path to the config file.[default: ./config/main.json]
+    --config-file=<str>         The path to the config file. Default configuration is embeded in the script.
     --clean-sd                  Do NOT clean SD after copying.
     --no-treat                  Don't treat files
     --treat                     Treat files
@@ -39,6 +39,7 @@ from .treat import treat
 from .importSD import Main
 from .makeLots import makeLots
 from .utils import Config, convert_args
+from .const import Const
 
 from path import Path
 from docopt import docopt
@@ -84,11 +85,12 @@ def main():
     # Remove empty values
     f_args = {k: v for k, v in f_args.items() if v is not None}
 
-    # Create config and update with args
-    # !!!!!!!
-    # To change : not absolute path
-    # !!!!!!!
-    conf = Config(f_args.pop('config-file'))
+    # --- Config ---
+    conf = Config(configString=Const.default_config)
+    # Update with user specified config file
+    if 'config-file' in f_args.keys():
+        conf.loadConfigFile(f_args.pop('config-file'))
+    # Update with args
     conf.update(f_args)
 
     managedb.make_client(conf['api-uri'])
@@ -111,14 +113,14 @@ def main():
     if conf.get('treat'):
         logger.info("=================================================")
         logger.info("================ Treating data  =================")
-        
+
         protocol = Protocol.FILE if conf['dir-manager-file'] else Protocol.FTP
         dir_manager_client = DirectoryManagerClient(api_base=conf['dir-manager-uri'], default_protocol=protocol)
         logger.info(srcDir)
         for l in makeLots(srcDir, csvFile):
             lot = treat(campaign, l, dir_manager_client)
             # lot object can't be send through network
-            if conf.get('export'): # send to task queue
+            if conf.get('export'):  # send to task queue
                 pass
 
 
