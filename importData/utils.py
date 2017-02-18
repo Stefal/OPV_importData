@@ -55,6 +55,8 @@ def select_arg(active, disable):
 def convert_args(args, name, invert=False):
     """ Convert Args ? """
     if invert:
-        return select_arg(args['--' + name], args['--no-' + name])
+        active = '--' + name in args and args['--' + name]
+        disable = '--no-' + name in args and args['--no-' + name]
+        return select_arg(active, disable)
     else:
         return args['--' + name]

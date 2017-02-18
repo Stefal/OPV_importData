@@ -6,6 +6,7 @@
     "import": true,
     "treat": true,
     "export": false,
+    "dir-manager-file": false,
     "id-rederbro": 1,
     "lots-output-dir": "~/opv/lots/{campaign}"
 }
