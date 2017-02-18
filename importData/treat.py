@@ -36,7 +36,7 @@ def treat(campaign, l, dir_manager_client):
     sensors = managedb.make_sensors(lng = sensorsData['gps']['lon'],
                                     alt = sensorsData['gps']['alt'],
                                     lat = sensorsData['gps']['lat'],
-                                    degree = sensorsData['compass']['degree'],
+                                    degrees = sensorsData['compass']['degree'],
                                     minutes = sensorsData['compass']['minutes'])
 
     uuid = copyImages(l, dir_manager_client)
