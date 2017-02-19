@@ -4,5 +4,5 @@ ExifRead==2.1.2
 httpie==0.9.9
 path.py==10.1
 Potion-client==2.5.0
--e git+https://github.com/OpenPathView/DirectoryManagerClient@07e45ea49f5546e64a8d355b10373b7209268c8f#egg=opv_directorymanagerclient
+-e git+https://github.com/OpenPathView/DirectoryManagerClient@master#egg=opv_directorymanagerclient
 pyudev==0.21.0
