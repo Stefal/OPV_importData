@@ -12,8 +12,6 @@ from shutil import copyfile
 from time import sleep
 from path import Path
 
-from .utils import singleton, ensure_dir
-
 logger = logging.getLogger(__name__)
 
 class APN_copy(threading.Thread):
@@ -44,8 +42,6 @@ class APN_copy(threading.Thread):
 
         self.unmount()
 
-        success = success and self.doClearSD()
-
         if not success:
             logger.warning("Tutute ! Erreur lors de la copie")
 
@@ -57,41 +53,6 @@ class APN_copy(threading.Thread):
             for line in mounts:
                 if line.startswith(self.devname):
                     return Path(line.split(' ')[1])
-
-    def doClearSD(self):
-        """
-        Reset the SD card
-        return False on error, True otherwise
-        """
-        ex = True
-
-        c = Main().config.get('clearSD')
-        iso = Main().config.get('ISO')
-
-        if not c:  # Don't clear anything
-            return True
-
-        iso = os.path.expanduser(iso)
-
-        logger.info("Starting to clear APN", self.apn_conf['APN_num'])
-        try:
-            # subprocess.run(['sudo', 'dd', 'if=' + iso, 'of=' + self.parent_devname])
-            pass
-        except subprocess.CalledProcessError:
-            ex = False
-        else:
-            sleep(1)  # Wait devname to be updated
-            ex = self.mount()
-
-            mountedpath = self.foundMountedPath()
-
-            if ex:
-                with open(os.path.join(mountedpath, "APN_config"), "w") as apnConfFile:
-                    json.dump(self.apn_conf, apnConfFile)
-            self.unmount()
-        logger.info("APN", self.apn_conf['APN_num'], "cleared")
-
-        return ex
 
     def getAPNConf(self):
         src = self.foundMountedPath()  # Where is mounted devname
@@ -163,7 +124,6 @@ class APN_copy(threading.Thread):
             logger.error("udisks not installed on system")
 
 
-@singleton
 class Main:
     def __init__(self):
         self.lock = threading.Event()
@@ -248,7 +208,6 @@ class Main:
         WaitForSDCard().stop()
 
 
-@singleton
 class WaitForSDCard:
     def __init__(self):
         self.context = pyudev.Context()

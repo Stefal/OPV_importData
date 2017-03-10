@@ -17,6 +17,7 @@ setup(
     entry_points={
         'console_scripts': [
             'opv-import = importData.__main__:main',
+            'opv-clean-sd = importData.cleanSD:main',
         ],
     }
 )
