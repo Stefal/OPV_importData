@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/OpenPathView/OPV_importData.svg?branch=master)](https://travis-ci.org/OpenPathView/OPV_importData)
 
+Iso files need git lfs installed to be fetch cf. [git lfs](https://git-lfs.github.com/)
+
 # Batch Pano Maker
 Scripts that import data from our backpack, make data sets with metas (GPS, orientation ....) and stitch all panoramas.
 
