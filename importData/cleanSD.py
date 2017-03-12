@@ -3,7 +3,7 @@
 
 """
 Usage:
-   cleanSD <iso-path>
+   cleanSD [<iso-path>]
    cleanSD -h | --help
 """
 
@@ -22,9 +22,15 @@ import logging
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
+GOPRO_REL_PATH = "../iso/goPro.iso"
+
 def main():
     args = docopt.docopt(__doc__)
-    m = Main(Path(args['<iso-path>']))
+    if '<iso-path>' in args and args['<iso-path>'] is not None:
+        iso = Path(args['<iso-path>'])
+    else:
+        iso = Path(__file__).dirname() / GOPRO_REL_PATH
+    m = Main(iso)
     m.start()
 
 class APN_clean(threading.Thread):
