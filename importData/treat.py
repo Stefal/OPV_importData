@@ -23,7 +23,7 @@ def copyImages(lot, dir_manager_client):
 
     return uuid
 
-def treat(campaign, l, dir_manager_client):
+def treat(id_malette, campaign, l, dir_manager_client):
     """ Push hard in DB and return lot"""
     try:
         sensorsData = l['csv'].data
@@ -33,7 +33,9 @@ def treat(campaign, l, dir_manager_client):
                        'takenDate': 0,
                        'goproFailed': 0}
 
-    sensors = managedb.make_sensors(lng = sensorsData['gps']['lon'],
+
+    sensors = managedb.make_sensors(id_malette,
+                                    lng = sensorsData['gps']['lon'],
                                     alt = sensorsData['gps']['alt'],
                                     lat = sensorsData['gps']['lat'],
                                     degrees = sensorsData['compass']['degree'],
@@ -42,7 +44,8 @@ def treat(campaign, l, dir_manager_client):
     uuid = copyImages(l, dir_manager_client)
 
     date = datetime.datetime.fromtimestamp(sensorsData['takenDate'])
-    lot = managedb.make_lot(campaign = campaign,
+    lot = managedb.make_lot(id_malette,
+                            campaign = campaign,
                             pictures_path = uuid,
                             sensors = sensors,
                             goprofailed = sensorsData['goproFailed'],
