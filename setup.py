@@ -10,7 +10,13 @@ setup(
     author_email="",
     description="The import script of OPV",
     long_description=open('README.md').read(),
-    # install_requires= ,
+    install_requires=[
+        "docopt",
+        "ExifRead",
+        "path.py",
+        "pyudev",
+        "geojson",
+        ],
     # Active la prise en compte du fichier MANIFEST.in
     include_package_data=True,
     url='https://github.com/OpenPathView/OPV_importData',
