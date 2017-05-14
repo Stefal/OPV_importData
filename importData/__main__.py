@@ -3,7 +3,7 @@
 
 """Import the data into the treatment chain
 Usage:
-    opv-import [options] <campaign>
+    opv-import [options] <id_malette> <campaign>
 
 Arguments:
     campaign                   The name of the campaign to import
@@ -82,6 +82,8 @@ def main():
         f_args[n] = convert_args(args, n)
     f_args['campaign'] = args['<campaign>']
 
+    id_malette = args['<id_malette>']
+
     # Remove empty values
     f_args = {k: v for k, v in f_args.items() if v is not None}
 
@@ -94,7 +96,8 @@ def main():
     conf.update(f_args)
 
     managedb.make_client(conf['api-uri'])
-    campaign = managedb.make_campaign(conf['campaign'], conf['id-rederbro'], conf.get('description'))
+
+    campaign = managedb.make_campaign(id_malette, conf['campaign'], conf['id-rederbro'], conf.get('description'))
 
     # We need to improve this
     # Case 1 : we pass the Arguments
@@ -118,7 +121,7 @@ def main():
         dir_manager_client = DirectoryManagerClient(api_base=conf['dir-manager-uri'], default_protocol=protocol)
         logger.info(srcDir)
         for l in makeLots(srcDir, csvFile):
-            lot = treat(campaign, l, dir_manager_client)
+            lot = treat(id_malette, campaign, l, dir_manager_client)
             # lot object can't be send through network
             if conf.get('export'):  # send to task queue
                 pass
