@@ -103,7 +103,8 @@ def main():
     # Case 1 : we pass the Arguments
     # Case 2 : Go get the file on rederbro
     srcDir = Path(conf["data-dir"].format(campaign=conf.get('campaign'))).expand()
-    csvFile = Path(srcDir) / "pictureInfo.csv"
+    # CSV path from args if it exist, fallback to data directory
+    csvFile = Path(conf['csv-path']) if 'csv-path' in conf else Path(srcDir) / "pictureInfo.csv"
 
     if conf.get('import'):
         logger.info("=================================================")
