@@ -43,6 +43,7 @@ class APN_clean(threading.Thread):
         self.parent_devname = parent_devname
         self.start()
         self.main = main
+        self.configFile = "APN_config.json"
 
     def run(self):
         logger.info("APN_copy -- run ", self.devname)
@@ -61,6 +62,8 @@ class APN_clean(threading.Thread):
 
         self.doClearSD()
 
+        self.saveConf()
+
         self.main.apns_done.add(self.apn_n)
 
     def foundMountedPath(self):
@@ -71,6 +74,28 @@ class APN_clean(threading.Thread):
             for line in mounts:
                 if line.startswith(self.devname):
                     return Path(line.split(' ')[1])
+
+    def saveConf(self):
+        """
+
+        """
+        sleep(1)
+        print("partie simon")
+
+        self.mount()
+
+        src = self.foundMountedPath()  # Where is mounted devname
+
+        try:  # Get config file for APN
+            with open(Path(src) / self.configFile, "w") as oldApnConfFile:
+                oldApnConfFile.write(json.dumps(self.apn_conf))
+        except FileNotFoundError:  # if partition isn't OPV data partition
+            logging.error("Error ! No APN_config file founded")
+            return False
+
+        self.unmount()
+
+        logger.info("Conf saved !")
 
     def doClearSD(self):
         """
@@ -88,7 +113,7 @@ class APN_clean(threading.Thread):
         src = self.foundMountedPath()  # Where is mounted devname
 
         try:  # Get config file for APN
-            with open(Path(src) / "APN_config", "r") as apnConfFile:
+            with open(Path(src) / self.configFile, "r") as apnConfFile:
                 self.apn_conf = json.load(apnConfFile)
         except FileNotFoundError:  # if partition isn't OPV data partition
             logging.error("Error ! No APN_config file founded")
