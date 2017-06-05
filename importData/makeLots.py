@@ -247,7 +247,6 @@ def readCSV(csv_path: str) -> list:
             degree = float(degree)
             minutes = float(minutes[1:-1])
             goproFailed = int(row[5])
-            debugNum = int(row[6])
 
             sensorsMeta = {
                 "takenDate": timestamp,
@@ -260,9 +259,7 @@ def readCSV(csv_path: str) -> list:
                     "degree": degree,
                     "minutes": minutes
                 },
-                "goproFailed": goproFailed,
-                "debugNum": debugNum
-            }
+                "goproFailed": goproFailed            }
 
             data.append(Csv(timestamp, sensorsMeta))
     return data
