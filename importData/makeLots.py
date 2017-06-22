@@ -116,7 +116,7 @@ def getImgsDataBis(srcDir: str):
 ###
 
 
-def sortAPNByTimestamp(apns, reverse=True):
+def sortAPNByTimestamp(apns, reverse=False):
     """Sort all data by timestamp"""
     apnSorted = {apn: sorted(vals, key=lambda x: x.timestamp, reverse=reverse) for apn, vals in apns.items()}
 
@@ -170,7 +170,7 @@ def makeLots(srcDir: str, csvFile: str) -> list:
     data = getImgsData(srcDir)
     data['csv'] = readCSV(csvFile)
 
-    data = levelTimestamps(data)
+    data = levelTimestamps(data, method=min)
     data = sortAPNByTimestamp(data)
 
     # The algorithme try to combine photos taken with
@@ -181,6 +181,7 @@ def makeLots(srcDir: str, csvFile: str) -> list:
     while changed_data:
         changed_data = False
 
+        # import ipdb; ipdb.set_trace();
         # The part of the data we will treat (maybe a lot)
         p = {k: v[0].timestamp for k, v in data.items() if len(v)}
 
@@ -199,8 +200,7 @@ def makeLots(srcDir: str, csvFile: str) -> list:
         keys = [k for k, v in p.items() if v - min_val < epsilon]
 
         if len(keys) == 1 and keys[0] == 'csv':  # prevent timing errors on gopros pictures meta
-            data = levelTimestamps(data)
-            data["csv"].pop()
+            data["csv"].pop(0)
             changed_data = True
             continue
 
@@ -259,8 +259,7 @@ def readCSV(csv_path: str) -> list:
                     "degree": degree,
                     "minutes": minutes
                 },
-                "goproFailed": goproFailed
-            }
+                "goproFailed": goproFailed            }
 
             data.append(Csv(timestamp, sensorsMeta))
     return data
