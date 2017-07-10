@@ -23,6 +23,8 @@ Options:
     --no-export                 Don't send files to the task queue
     --import                    Import files
     --no-import                 Don't import files
+    --ref=<str>                 'first' the first images (oldest) constitute a reference lot,
+                                'last' the last images (newest) constitue a reference lot.
     --data-dir=<str>            Where should be placed file imported from SD
     --lots-output-dir=<str>     Where created lots may be placed
     --id-rederbro=<str>         Id of the rederbro use fot the campaign
@@ -78,7 +80,7 @@ def main():
     # Convert args
     for n in ['clean-sd', 'import', 'treat', 'export', 'dir-manager-file']:
         f_args[n] = convert_args(args, n, True)
-    for n in ['api-uri', 'dir-manager-uri', 'config-file', 'data-dir', 'lots-output-dir', 'id-rederbro', 'description', 'csv-path']:
+    for n in ['api-uri', 'dir-manager-uri', 'config-file', 'data-dir', 'lots-output-dir', 'id-rederbro', 'description', 'csv-path', 'ref']:
         f_args[n] = convert_args(args, n)
     f_args['campaign'] = args['<campaign>']
 
@@ -121,7 +123,9 @@ def main():
         protocol = Protocol.FILE if conf['dir-manager-file'] else Protocol.FTP
         dir_manager_client = DirectoryManagerClient(api_base=conf['dir-manager-uri'], default_protocol=protocol)
         logger.info(srcDir)
-        for l in makeLots(srcDir, csvFile):
+        refFirst = conf.get("ref") == 'first'
+        logger.info("FirstLotRef = " + str(refFirst))
+        for l in makeLots(srcDir, csvFile, firstLotRef=refFirst):
             lot = treat(id_malette, campaign, l, dir_manager_client)
             # lot object can't be send through network
             if conf.get('export'):  # send to task queue
