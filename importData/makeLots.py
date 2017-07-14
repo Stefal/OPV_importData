@@ -144,6 +144,7 @@ def levelTimestamps(apns: dict, method=max) -> dict:
     - max -> level -1st photo to 0
     - otherwise: TODO
     """
+    logger.info("Level timestamps for " + ("first (oldest) lot" if method == min else " last (newest) lot"))
     n_apns = defaultdict(list)
 
     if method is min or method is max:
@@ -159,7 +160,7 @@ def levelTimestamps(apns: dict, method=max) -> dict:
 ###
 
 
-def makeLots(srcDir: str, csvFile: str) -> list:
+def makeLots(srcDir: str, csvFile: str, firstLotRef=True) -> list:
     """
     Make all the lots
     return a list of lots
@@ -170,7 +171,8 @@ def makeLots(srcDir: str, csvFile: str) -> list:
     data = getImgsData(srcDir)
     data['csv'] = readCSV(csvFile)
 
-    data = levelTimestamps(data, method=min)
+    method = min if firstLotRef else max
+    data = levelTimestamps(data, method=min if firstLotRef else max)
     data = sortAPNByTimestamp(data)
 
     # The algorithme try to combine photos taken with
