@@ -51,7 +51,7 @@ from opv_directorymanagerclient import DirectoryManagerClient, Protocol
 import logging
 
 formatter_f = logging.Formatter('%(asctime)s %(name)-25s %(levelname)-8s %(message)s')
-formatter_c = logging.Formatter('%(name)-25s: %(levelname)-8s %(message)s')
+formatter_c = logging.Formatter('%(name)-30s: %(levelname)-8s %(message)s')
 
 fh = logging.FileHandler('/tmp/importData.log')
 ch = logging.StreamHandler()
@@ -70,6 +70,7 @@ rootLogger.setLevel(logging.DEBUG)
 
 
 logger = logging.getLogger('importData.' + __name__)
+
 
 def main():
     """ Import Images from SD """
@@ -110,9 +111,8 @@ def main():
 
     if conf.get('import'):
         logger.info("=================================================")
-        logger.info("===== Let's import the image from SD card =======")
+        logger.info("======= Let's import images from SD cards =======")
 
-        logger.info("Get data from SD card ...")
         Main().init(conf.get('campaign'), conf).start()
         logger.info("... Done ! Data recover.")
 

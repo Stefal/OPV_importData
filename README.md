@@ -1,66 +1,60 @@
 [![Build Status](https://travis-ci.org/OpenPathView/OPV_importData.svg?branch=master)](https://travis-ci.org/OpenPathView/OPV_importData)
 
-# Requirements
+Iso files need git lfs installed to be fetch cf. [git lfs](https://git-lfs.github.com/)
 
-## Git LFS
-Before clonning this repository, you need to install **git-lfs**. You should follow [the git-lfs install guide](https://help.github.com/articles/installing-git-large-file-storage/).
+# Batch Pano Maker
+Scripts that import data from our backpack, make data sets with metas (GPS, orientation ....) and stitch all panoramas.
 
-## APIs
-You can build a fully functional environment with containers using our [Ansible scripts](https://github.com/openpathview/opv_ansible).
-Or install and run the needed APIs :
- - [OPV_DBRest](https://github.com/Openpathview/OPV_DBrest) : you will need to kown it's endpoint. This API will be used to store all metadata.
- - [DirectoryManager](https://github.com/OpenPathView/DirectoryManager) : you will also need to know it's endpoint. This API is our storage API.
+/!\ Need Hugin for CP_stats.py
 
-You can deploy a master node with all these services using our [OPV_Ansible](https://github.com/OpenPathView/OPV_ansible) scripts.
+## Installation
+### Start by creating a venv
+`virtualenv mon_env -p /usr/bin/python3.5 --no-site-packages`
+### Go inside
+`. mon_env/bin/activate`
+### Install all dependencies
+`pip install -r requirements.txt`
+### Install importData
+`./setup.py install` or, if you're developing on it, `./setup.py develop`
 
-## Host configuration
-We will use **opv_master**, we have DB_Rest and the DirectoryManager on this machine. You might set it in your /etc/hosts file.
+## Launch
+### Then the api server
+`python api/server.py run`
+### Then launch the import from importData dir
+`opv-import capucin --csv-path=/home/tom/Documents/OPV/OPV_importData/importData/picturesInfo.csv`
 
-# Install
+## Architecture
+This software is now composed of three components:
+ * A filemanager server - a simple server that allow to make a link between unique ID and directory, will quickly be remplaced by [a more complete solution](https://github.com/OpenPathView/DirectoryManager/). See into filemanager.
+ * An API server - a simple REST server that expose a DB. See into api/.
+ * The import data script - a script that import data from sd-cards, make lots and exports all data into the DB through the api and the filemanager.
 
-First clone this repository :
-```bash
-git clone https://github.com/OpenPathView/DirectoryManager.git
-```
+### API
+It's a server located on port 5000
+The API server implement this database:
+![Database](https://raw.githubusercontent.com/OpenPathView/OPV_importData/master/doc/database/main_db.png)
+And some content for more easy debugging:
+- get all lots of an campaign (here campaign ID=1): `httpie GET :5000/campaign/1/lots`
+- get all cp of a lot (here lot ID=1): `httpie GET :5000/lot/1/cps`
+- get all tiles of a panorama (here panorama ID=1): `httpie GET :5000/panorama/1/tiles`
+- stop the server (only if --debug is precised while launching the server): `http POST :5000/shutdown`
 
-*We suggest that you use a python virtualenv on run all the following commands in this virtualenv.*
 
-To install the import script you simply need to run :
-```bash
-cd DirectoryManager
-# switch in your venv
-python setup.py install
-```
+### Import data script
+This script imports, detect sd-card, mount them using udisks2 (udiskctl), copy all images to data dir and create lots.
+See `import.py --help` for options.
+There are also statics options in OPV_importData/importData/config/main.json
+- data-dir - default: ~/opv/rederbro/{campaign}/ - Where images from sd-cards are copied to.
+- pi-location - default : pi@192.168.42.1:/home/pi/opv/lastPictureInfo.csv" - Where pictureInfo (metas from rederbro backpack) should be grabbed.
+- ISO - default: ~/opv/iso/goPro.iso" - Where is the iso of an empty sd-card. Unutilized when clean-sd is false.
+- clean-sd - default: false - Remove files from the sd-card (do a dd). Commented for the moment.
+- import - default: true - Import files from sd-card
+- export - default: true - Send lots into the celery queue
+- treat - default: true - Make lots from data
+- id-rederbro - default: 1 - The id of the rederbro
+- lots-output-dir - default: ~/opv/lots/{campaign} - Where lots should be stored.
 
-# Importing from SD cards
-TODO
-
-# Importing test dataset
-First you need to download our test dataset (7Gio).
-```bash
-cd /tmp
-curl -L -o brestStreetsDataSet.tar.gz -C - https://storage.openpathview.fr/testDataSets/2017/brestStreetsDataSet.tar.gz
-tar xvzf brestStreetsDataSet.tar.gz
-```
-
-Run **opv-import** with the test dataset :
-```bash
-opv-import --data-dir=/tmp/brestStreetsDataSet/SD --no-import --csv-path=/tmp/brestStreetsDataSet/picturesInfo.csv --dir-manager-uri=http://opv_master:5005 --api-uri=http://opv_master:5000 15 campaignName
-```
-
-To check that the data where imported you can call the API :
-```bash
-curl http://opv_master:5000/campaign/?name=campaignName
-```
-
-# Cleaning SD cards
-To clean the 6 SD cards of Rederbro, just launch the following command before inserting the SD card :
-```bash
-opv-clean-sd
-```
-** You will need root privileges. **
-
-# Create GoPro Empty ISO
+#### Make Empty ISO
 SD cards for GoPro cameras needs to be well formated. The only way to do that is to format an SD card in a GoPro camera an copy it's partition table.
 To do so :
 - format your SD card in a GoPro camera
