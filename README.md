@@ -1,7 +1,5 @@
 [![Build Status](https://travis-ci.org/OpenPathView/OPV_importData.svg?branch=master)](https://travis-ci.org/OpenPathView/OPV_importData)
 
-Iso files need git lfs installed to be fetch cf. [git lfs](https://git-lfs.github.com/).
-
 # Requirements
 
 ## Git LFS
@@ -31,6 +29,9 @@ cd DirectoryManager
 python setup.py install
 ```
 
+# Importing from SD cards
+TODO
+
 # Importing test dataset
 First you need to download our test dataset (7Gio).
 ```bash
@@ -45,8 +46,11 @@ opv-import --data-dir=/tmp/brestStreetsDataSet/SD --no-import --csv-path=/tmp/br
 ```
 
 # Cleaning SD cards
-
-TODO
+To clean the 6 SD cards of Rederbro, just launch the following command before inserting the SD card :
+```bash
+opv-clean-sd
+```
+** You will need root privileges. **
 
 # Create GoPro Empty ISO
 SD cards for GoPro cameras needs to be well formated. The only way to do that is to format an SD card in a GoPro camera an copy it's partition table.
@@ -54,3 +58,18 @@ To do so :
 - format your SD card in a GoPro camera
 - Make an ISO : `sudo dd if=/dev/sdb of=imgGoPro.img bs=10M count=1`
 - specify the path of this ISO in OPV_importData/importData/config/main.json
+
+
+# License
+
+Copyright (C) 2017 Open Path View <br />
+This program is free software; you can redistribute it and/or modify  <br />
+it under the terms of the GNU General Public License as published by  <br />
+the Free Software Foundation; either version 3 of the License, or  <br />
+(at your option) any later version.  <br />
+This program is distributed in the hope that it will be useful,  <br />
+but WITHOUT ANY WARRANTY; without even the implied warranty of  <br />
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the  <br />
+GNU General Public License for more details.  <br />
+You should have received a copy of the GNU General Public License along  <br />
+with this program. If not, see <http://www.gnu.org/licenses/>.  <br />
