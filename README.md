@@ -10,6 +10,8 @@ To import the datasets you need 2 webservice :
  - [OPV_DBRest](https://github.com/Openpathview/OPV_DBrest) : you will need to kown it's endpoint. This API will be used to store all metadata.
  - [DirectoryManager](https://github.com/OpenPathView/DirectoryManager) : you will also need to know it's endpoint. This API is our storage API.
 
+You can deploy a master node with all these services using our [OPV_Ansible](https://github.com/OpenPathView/OPV_ansible) scripts.
+
 ## Host configuration
 We will use **opv_master**, we have DB_Rest and the DirectoryManager on this machine. You might set it in your /etc/hosts file.
 
@@ -43,6 +45,11 @@ tar xvzf brestStreetsDataSet.tar.gz
 Run **opv-import** with the test dataset :
 ```bash
 opv-import --data-dir=/tmp/brestStreetsDataSet/SD --no-import --csv-path=/tmp/brestStreetsDataSet/picturesInfo.csv --dir-manager-uri=http://opv_master:5005 --api-uri=http://opv_master:5000 15 campaignName
+```
+
+To check that the data where imported you can call the API :
+```bash
+curl http://opv_master:5000/campaign/?name=campaignName
 ```
 
 # Cleaning SD cards
