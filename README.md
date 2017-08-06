@@ -6,7 +6,8 @@
 Before clonning this repository, you need to install **git-lfs**. You should follow [the git-lfs install guide](https://help.github.com/articles/installing-git-large-file-storage/).
 
 ## APIs
-To import the datasets you need 2 webservice :
+You can build a fully functional environment with containers using our [Ansible scripts](https://github.com/openpathview/opv_ansible).
+Or install and run the needed APIs :
  - [OPV_DBRest](https://github.com/Openpathview/OPV_DBrest) : you will need to kown it's endpoint. This API will be used to store all metadata.
  - [DirectoryManager](https://github.com/OpenPathView/DirectoryManager) : you will also need to know it's endpoint. This API is our storage API.
 
