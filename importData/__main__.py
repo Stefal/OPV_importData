@@ -115,6 +115,7 @@ def main():
 
         Main().init(conf.get('campaign'), conf).start()
         logger.info("... Done ! Data recover.")
+        return
 
     if conf.get('treat'):
         logger.info("=================================================")

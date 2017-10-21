@@ -8,6 +8,7 @@ Scripts that import data from our backpack, make data sets with metas (GPS, orie
 /!\ Need Hugin for CP_stats.py
 
 ## Installation
+apt install udisks2
 ### Start by creating a venv
 `virtualenv mon_env -p /usr/bin/python3.5 --no-site-packages`
 ### Go inside

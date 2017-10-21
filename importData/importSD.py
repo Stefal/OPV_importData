@@ -2,6 +2,7 @@
 # coding: utf-8
 
 import os
+import glob
 import json
 import shutil
 import pyudev
@@ -16,16 +17,34 @@ logger = logging.getLogger(__name__)
 
 
 class APN_copy(threading.Thread):
-    """
-    A class which will mount and copy the APN data to work dir
-    """
-    def __init__(self, devname, parent_devname, pictDir):
+    """A class which will mount and copy the APN data to work dir."""
+    def __init__(self, devname, pictDir):
         threading.Thread.__init__(self)
         self.devname = devname
-        self.parent_devname = parent_devname
         self.pictDir = pictDir
         self.src = ''
         self.start()
+
+    # Print iterations progress
+    def printProgressBar(self, iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+        """
+        Call in a loop to create terminal progress bar
+        @params:
+            iteration   - Required  : current iteration (Int)
+            total       - Required  : total iterations (Int)
+            prefix      - Optional  : prefix string (Str)
+            suffix      - Optional  : suffix string (Str)
+            decimals    - Optional  : positive number of decimals in percent complete (Int)
+            length      - Optional  : character length of bar (Int)
+            fill        - Optional  : bar fill character (Str)
+        """
+        percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+        filledLength = int(length * iteration // total)
+        bar = fill * filledLength + '-' * (length - filledLength)
+        print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
+        # Print New Line on Complete
+        if iteration == total:
+            print()
 
     def run(self):
         logger.info("Mounting %s ...", self.devname)
@@ -38,21 +57,15 @@ class APN_copy(threading.Thread):
         success = self.getAPNConf()
         logger.info("APN%s detected", self.apn_n)
 
-        if success and Main().APN_treated[self.apn_n]:  # SDCard already treated
-            self.unmount()
-            return
-
         success = success and self.doCopy()
 
         self.unmount()
 
         if not success:
-            logger.warning("Tutute ! Erreur lors de la copie")
+            logger.warning("Erreur lors de la copie")
 
     def foundMountedPath(self):
-        """
-        Return the path of the mounted path of self.devname
-        """
+        """Return the path of the mounted path of self.devname."""
         with open("/proc/mounts", "r") as mounts:
             for line in mounts:
                 if line.startswith(self.devname):
@@ -72,32 +85,28 @@ class APN_copy(threading.Thread):
         return True
 
     def doCopy(self):
-        """
-        copy all the photo from the SD card
-        """
+        """Copy all photos from the SD card."""
         self.dest = self.pictDir + "APN" + str(self.apn_n)
         # Creation of dir with the name of the apn
         os.makedirs(self.dest, exist_ok=True)
-        logger.info("Copying started from %s to %s ...", self.src, self.dest)
+        source_dir = self.src + "/DCIM/"
 
-        # BE CARREFUL we can have multiple directories whith same filename
-        for root, dirs, files in os.walk(self.src):
-            for filename in files:
-                # I use absolute path, case you want to move several dirs.
-                old_name = os.path.join(os.path.abspath(root), filename)
-
-                # Separate base from extension
-                base, extension = os.path.splitext(filename)
-                if extension != ".JPG":
-                    # not a JPG let's continue
-                    continue
-                # Initial new name
-                new_name = os.path.join(self.dest, base + "_" + filename)
-
-                # import pdb; pdb.set_trace()
-                if not os.path.exists(new_name):  # folder exists, file does not
-                    shutil.copy(old_name, new_name)
-                    logger.info("Copied %s to %s", old_name, new_name)
+        for dir in os.listdir(source_dir):
+            dir_path = source_dir + dir
+            logger.info("Copying started from %s to %s ...", dir_path, self.dest)
+            # Get only JPG file
+            files = glob.iglob(os.path.join(dir_path, "*.JPG"))
+            images = glob.iglob(os.path.join(dir_path, "*.JPG"))
+            l = len(list(images))
+            self.printProgressBar(0, l, prefix="APN" + str(self.apn_n), suffix='Complete', length=50)
+            i = 0
+            for file in files:
+                if os.path.isfile(file):
+                    i = i + 1
+                    dest_dir = self.dest + "/" + os.path.split(os.path.split(file)[0])[1] + "_" + os.path.split(file)[1]
+                    command = "cp " + file + " " + dest_dir
+                    self.printProgressBar(i, l, prefix="APN" + str(self.apn_n), suffix='Complete', length=50)
+                    os.system(command)
 
         logger.info("... Copy finished")
         return self.apn_n
@@ -110,7 +119,7 @@ class APN_copy(threading.Thread):
         try:
             p = subprocess.Popen(['udisksctl', 'mount', '-b', self.devname], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = p.communicate()
-            logger.info("..." + out.decode('ascii'))
+            logger.info("... " + out.decode('ascii'))
         except subprocess.CalledProcessError:
             logger.error("{} not mounted".format(self.devname))
             return False
@@ -120,11 +129,11 @@ class APN_copy(threading.Thread):
         return True
 
     def unmount(self):
-        """
-        unmount devname using udisckctl
-        """
+        """Unmount devname using udisckctl."""
         try:
-            subprocess.call(['udisksctl', 'unmount', '-b', self.devname])
+            p = subprocess.Popen(['udisksctl', 'unmount', '-b', self.devname], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = p.communicate()
+            logger.info("... " + out.decode('ascii'))
         except subprocess.CalledProcessError:
             logger.error("{} not unmounted".format(self.devname))
         except FileNotFoundError:
@@ -165,7 +174,9 @@ class Main:
         return self
 
     def APN_copied(self, apn_n):
+        """ Set as True when apn is finish to copy."""
         self.APN_treated[apn_n] = True
+        logger.info("APN %s finished", apn_n)
         if all(self.APN_treated):
             self.stop()
 
@@ -174,12 +185,9 @@ class Main:
         :device: the device where is situed the APN
         """
         devname = device['DEVNAME']
-        if 'parent' in device:
-            parent_devname = device.parent['DEVNAME']
-        else:
-            parent_devname = device['DEVNAME'][:-1]
         logger.info("... APN detected on %s", devname)
-        APN_copy(devname, parent_devname, pictDir=self.pictDir)
+        APN_copy(devname, pictDir=self.pictDir)
+        self.APN_copied(apn_n)
 
     def getPictureInfoFromPi(self, dest):
         """
