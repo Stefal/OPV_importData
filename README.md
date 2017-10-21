@@ -23,6 +23,7 @@ apt install udisks2
 `python api/server.py run`
 ### Then launch the import from importData dir
 `opv-import capucin --csv-path=/home/tom/Documents/OPV/OPV_importData/importData/picturesInfo.csv`
+`opv-import --import --csv-path=/home/tom/picturesInfo.csv --dir-manager-uri=http://10.91.114.219:5005 --api-uri=http://10.91.114.219:5000 --ref=last 15 botanic --no-treati`
 
 ## Architecture
 This software is now composed of three components:
