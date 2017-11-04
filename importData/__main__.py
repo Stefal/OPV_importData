@@ -32,6 +32,9 @@ Options:
     --dir-manager-uri=<str>     URI of the DirectoryManager [default: http://localhost:5001]
     --dir-manager-file          Tells directory manager to use local hardlinking or copy.
                                 Use this option if you are on the DirectoryManager server manager to speed up transferts.
+                                You should also set dir-manager-tmp to a directory on the same partition (partition of the picture files)
+                                so that hardlinks work.
+    --dir-manager-tmp=<str>     Tells the DirectoryManagerClient where is it's tempory directory.
 
     --api-uri=<str>             URI of the DirectoryManager [default: http://localhost:5000]
     --debug                     Set logs to debug.
@@ -123,8 +126,13 @@ def main():
         logger.info("=================================================")
         logger.info("================ Treating data  =================")
 
-        protocol = Protocol.FILE if conf['dir-manager-file'] else Protocol.FTP
-        dir_manager_client = DirectoryManagerClient(api_base=conf['dir-manager-uri'], default_protocol=protocol)
+        dm_client_args = {}
+        if '--dir-manager-tmp' in args and args['--dir-manager-tmp'] is not None and Path(args['--dir-manager-tmp']).isdir():
+            dm_client_args["workspace_directory"] = args['--dir-manager-tmp']
+
+        dm_client_args["default_protocol"] = Protocol.FILE if conf['dir-manager-file'] else Protocol.FTP
+        dm_client_args["api_base"] = conf['dir-manager-uri']
+        dir_manager_client = DirectoryManagerClient(**dm_client_args)
         logger.info(srcDir)
         refFirst = conf.get("ref") == 'first'
         logger.info("FirstLotRef = " + str(refFirst))
