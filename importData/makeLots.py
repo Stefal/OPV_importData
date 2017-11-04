@@ -6,14 +6,14 @@ import csv
 from collections import namedtuple, defaultdict
 
 from path import Path
-from os import walk
+from os import walk, listdir
 
 import time
 import logging
 import datetime
 import exifread
 
-logger = logging.getLogger("importData." +  __name__)
+logger = logging.getLogger("importData." + __name__)
 
 
 ###
@@ -42,12 +42,12 @@ def readEXIFTime(picPath: str) -> int:
     return timestamp
 
 
-def listImgsByAPN(srcDir: str) -> dict:
+def listImgsByAPN_old(srcDir: str) -> dict:
     """
     return the list of all images in srcDir and sort them by APN
     """
     logger.info("Start listing images")
-    r = re.compile('APN[0-9]+')
+    r = re.compile('^/?APN[0-9]+(.+)?')
     j = re.compile('.+\.(jpeg|jpg)', re.IGNORECASE)
 
     def isJpg(x):
@@ -61,16 +61,75 @@ def listImgsByAPN(srcDir: str) -> dict:
     imgListByApn = defaultdict(list)
 
     for dirpath, _, filenames in walk(srcDir):
-        if isAPN(Path(dirpath).basename()):
-            # imgListByApn[dirpath] = list(filter(isJpg, filenames))
-            imgListByApn[dirpath] = [f for f in filenames if isJpg(f)]
+        # logger.debug(dirpath)
+        relative_dir_path = dirpath.replace(srcDir, "")
+        logger.debug("relative_dir_path : " + relative_dir_path)
+        if isAPN(relative_dir_path):
+            imgListByApn[dirpath] = [Path(dirpath) / f for f in filenames if isJpg(f)]
 
             if len(imgListByApn[dirpath]) == 0:
                 logger.warning("No image founded in {}".format(dirpath))
 
+    # logger.debug(imgListByApn)
     logger.info("All images listed")
     return imgListByApn
 
+def listImgsByAPN(srcDir: str):
+    """
+    Fetch all images in srcDir under APNx directories (and their subdirectories).
+    Return them in a dict where the key is the apnNo the value a list a images Path.
+
+    :param srcDir: Source directory should contain APN[0-9] subdirectories with images (images might be under subdirectories it also works)
+    :return: Return them in a dict where the key is the apnNo the value a list a images Path.
+             {0: [Path("srcDir/APN0/sudir/img.jpg"), .....], 1: [Path("srcDir/APN1/img.jpg"), .....], ... 6: [...] }
+    """
+    logger.info("Start listing images")
+    imgListByApn = defaultdict(list)
+
+    r = re.compile('APN[0-9]+')
+    j = re.compile('.+\.(jpeg|jpg)', re.IGNORECASE)
+
+    def isJpg(x):
+        """return true if string x finish by jpg/jpeg"""
+        return j.match(x)
+
+    def isAPN(x):
+        """return true if string x is APN* """
+        return r.match(x)
+
+    def getApnNum(dirpath):
+        """
+        Return APN number from directory name "srcDir/APNx".
+        :param dirpath: dir path "srcDir/APNx"
+        :return: x the apnNo
+        """
+        return int(re.search(r"\d+", Path(dirpath).basename()).group(0))
+
+    def getAllPic(basedir):
+        """
+        Return all Path of JPG files in basedir and it's subdirectories.
+        :param dirpath: directory to explore
+        :return: List of pic path [Path(basedir/picA.jpg), ...]
+        """
+        pics = list()
+        for dirpath, _, filenames in walk(basedir):
+            for f in filenames:
+                if isJpg(f):
+                    pics.append(Path(dirpath) / f)
+        return pics
+
+    for apnDir in listdir(srcDir):  # Fetch cameras folders
+        if isAPN(apnDir):  # check it's a camera folder
+            fullpath = Path(srcDir) / apnDir
+            apnNo = getApnNum(fullpath)
+            imgListByApn[apnNo] = getAllPic(fullpath)   # getting all pictures in it and it's subdirectories
+
+            if len(imgListByApn[apnNo]) == 0:
+                logger.warning("No image founded for camera {} in {}".format(str(apnNo), fullpath))
+
+    logger.debug("Fetched pictures for each cameras : ")
+    logger.debug(imgListByApn)
+    return imgListByApn
 
 def getImgData(p: str) -> Photo:
     return Photo(readEXIFTime(p), Path(p))
@@ -80,17 +139,10 @@ def getImgsData(srcDir: str) -> dict:
     """
     get all the data from scrDir (img, timestamps...)
     """
-    d = listImgsByAPN(srcDir)
-
-    imgData = defaultdict(list)
-
-    for dirpath, listImg in d.items():
-        for imgName in listImg:
-            imgPath = Path(dirpath) / imgName
-            # extract the apn number from the last segment of dirpath (APN0, 1...)
-            apnNo = int(re.search(r"\d+", Path(dirpath).basename()).group(0))
-
-            imgData[apnNo].append(getImgData(imgPath))
+    pictures_by_apn = listImgsByAPN(srcDir)
+    imgData = {apnNo: [getImgData(pic_path) for pic_path in pictures_paths] for apnNo, pictures_paths in pictures_by_apn.items()}
+    logger.debug("Images with ts : ")
+    logger.debug(imgData)
     return imgData
 
 
@@ -171,7 +223,6 @@ def makeLots(srcDir: str, csvFile: str, firstLotRef=True) -> list:
     data = getImgsData(srcDir)
     data['csv'] = readCSV(csvFile)
 
-    method = min if firstLotRef else max
     data = levelTimestamps(data, method=min if firstLotRef else max)
     data = sortAPNByTimestamp(data)
 
@@ -261,7 +312,8 @@ def readCSV(csv_path: str) -> list:
                     "degree": degree,
                     "minutes": minutes
                 },
-                "goproFailed": goproFailed            }
+                "goproFailed": goproFailed
+            }
 
             data.append(Csv(timestamp, sensorsMeta))
     return data

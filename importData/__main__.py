@@ -34,6 +34,7 @@ Options:
                                 Use this option if you are on the DirectoryManager server manager to speed up transferts.
 
     --api-uri=<str>             URI of the DirectoryManager [default: http://localhost:5000]
+    --debug                     Set logs to debug.
 """
 
 from . import managedb
@@ -66,8 +67,6 @@ rootLogger = logging.getLogger('importData')
 rootLogger.addHandler(ch)
 rootLogger.addHandler(fh)
 
-rootLogger.setLevel(logging.DEBUG)
-
 
 logger = logging.getLogger('importData.' + __name__)
 
@@ -77,6 +76,9 @@ def main():
     # Read the __doc__ and build the Arguments
     args = docopt(__doc__)
     f_args = dict()
+
+    # logs
+    rootLogger.setLevel(logging.DEBUG if "--debug" in args and args["--debug"] else logging.INFO)
 
     # Convert args
     for n in ['clean-sd', 'import', 'treat', 'export', 'dir-manager-file']:
@@ -127,7 +129,7 @@ def main():
         refFirst = conf.get("ref") == 'first'
         logger.info("FirstLotRef = " + str(refFirst))
         for l in makeLots(srcDir, csvFile, firstLotRef=refFirst):
-            lot = treat(id_malette, campaign, l, dir_manager_client)
+            treat(id_malette, campaign, l, dir_manager_client)
             # lot object can't be send through network
             if conf.get('export'):  # send to task queue
                 pass
