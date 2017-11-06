@@ -297,8 +297,9 @@ def readCSV(csv_path: str) -> list:
             lng = float(row[2])
             alt = float(row[3])
             degree, minutes = row[4].split('\u00b0')
+            minutes = minutes.replace(" ", "").replace("'", "")
             degree = float(degree)
-            minutes = float(minutes[1:-1])
+            minutes = float(minutes)
             goproFailed = int(row[5])
 
             sensorsMeta = {
