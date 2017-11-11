@@ -1,29 +1,38 @@
 #!/usr/bin/python3
 # coding: utf-8
 
-from . import managedb
-import datetime
+import os
 import logging
-
-logger = logging.getLogger("importData." + __name__)
+import datetime
+from . import managedb
 from path import Path
 
-def copyImages(lot, dir_manager_client):
+logger = logging.getLogger("importData." + __name__)
+
+def copyImages(lot, dir_manager_client, hardlink=False):
     """
     Copy images using DirectoryManagerClient.
     :param lot: A list of ('Csv':[], 0: '/tt/aa/APN0/IMG_00.JPG' ...)
     :param dir_manager_client: A DirectoryManagerClient.
+    :param hardlink: Tell we should hardlink into DM.
+                     Will force hardlinking, take care that it's on the same device
+                     (you should set DM workspace_directory on the same device).
     """
     l = lot.copy()
     l.pop('csv', None)
 
     with dir_manager_client.Open() as (uuid, dir_path):
         for key, photo in l.items():
-            photo.path.copy(Path(dir_path) / 'APN{}{}'.format(key, photo.path.ext))
+            dest = Path(dir_path) / 'APN{}{}'.format(key, photo.path.ext)
+            if hardlink:
+                logger.debug("Hardlinking : {} -> {}".format(photo.path, dest))
+                os.link(photo.path, dest)
+            else:
+                photo.path.copy(dest)
 
     return uuid
 
-def treat(id_malette, campaign, l, dir_manager_client):
+def treat(id_malette, campaign, l, dir_manager_client, hardlinking=False):
     """ Push hard in DB and return lot"""
     try:
         sensorsData = l['csv'].data
@@ -41,7 +50,7 @@ def treat(id_malette, campaign, l, dir_manager_client):
                                     degrees = sensorsData['compass']['degree'],
                                     minutes = sensorsData['compass']['minutes'])
 
-    uuid = copyImages(l, dir_manager_client)
+    uuid = copyImages(l, dir_manager_client, hardlinking)
 
     date = datetime.datetime.fromtimestamp(sensorsData['takenDate'])
     lot = managedb.make_lot(id_malette,

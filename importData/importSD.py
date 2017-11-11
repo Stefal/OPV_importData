@@ -1,101 +1,115 @@
 #!/usr/bin/python3
 # coding: utf-8
 
+import os
+import glob
 import json
+import shutil
 import pyudev
+import logging
 import threading
 import subprocess
-import os
 
-import logging
-from shutil import copyfile
 from time import sleep
-from path import Path
+from shutil import copyfile
 
 logger = logging.getLogger(__name__)
 
+
 class APN_copy(threading.Thread):
-    """
-    A class which will mount and copy the APN data to work dir
-    """
-    def __init__(self, devname, parent_devname):
+    """A class which will mount and copy the APN data to work dir."""
+    def __init__(self, devname, pictDir):
         threading.Thread.__init__(self)
         self.devname = devname
-        self.parent_devname = parent_devname
+        self.pictDir = pictDir
+        self.src = ''
         self.start()
 
+    # Print iterations progress
+    def printProgressBar(self, iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+        """
+        Call in a loop to create terminal progress bar
+        @params:
+            iteration   - Required  : current iteration (Int)
+            total       - Required  : total iterations (Int)
+            prefix      - Optional  : prefix string (Str)
+            suffix      - Optional  : suffix string (Str)
+            decimals    - Optional  : positive number of decimals in percent complete (Int)
+            length      - Optional  : character length of bar (Int)
+            fill        - Optional  : bar fill character (Str)
+        """
+        percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+        filledLength = int(length * iteration // total)
+        bar = fill * filledLength + '-' * (length - filledLength)
+        print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end='\r')
+        # Print New Line on Complete
+        if iteration == total:
+            print()
+
     def run(self):
-        logger.info("APN_copy -- run ", self.devname)
+        logger.info("Mounting %s ...", self.devname)
         # Boooooouuuuuhhh ugly
         sleep(1)  # wait 1 sec, waiting the system to setup device block file
 
         if not self.foundMountedPath():
             self.mount()
 
-        success = self.foundMountedPath() and self.getAPNConf()
-
-        if success and Main().APN_treated[self.apn_n]:  # SDCard already treated
-            self.unmount()
-            return
+        success = self.getAPNConf()
+        logger.info("APN%s detected", self.apn_n)
 
         success = success and self.doCopy()
 
         self.unmount()
 
         if not success:
-            logger.warning("Tutute ! Erreur lors de la copie")
+            logger.warning("Erreur lors de la copie")
 
     def foundMountedPath(self):
-        """
-        Return the path of the mounted path of self.devname
-        """
+        """Return the path of the mounted path of self.devname."""
         with open("/proc/mounts", "r") as mounts:
             for line in mounts:
                 if line.startswith(self.devname):
-                    return Path(line.split(' ')[1])
+                    return line.split(' ')[1]
 
     def getAPNConf(self):
-        src = self.foundMountedPath()  # Where is mounted devname
+        self.src = self.foundMountedPath()  # Where is mounted devname
 
         try:  # Get config file for APN
-            with open(Path(src) / "APN_config", "r") as apnConfFile:
+            with open(self.src + "/APN_config.json", "r") as apnConfFile:
                 self.apn_conf = json.load(apnConfFile)
         except FileNotFoundError:  # if partition isn't OPV data partition
-            logging.error("Error ! No APN_config file founded")
+            logger.error("Error ! No APN_config file founded")
             return False
 
         self.apn_n = self.apn_conf.get('APN_num', None)
         return True
 
     def doCopy(self):
-        """
-        copy all the photo from the SD card
-        return False on error, True otherwise
-        """
-        ex = True  # return code
+        """Copy all photos from the SD card."""
+        self.dest = self.pictDir + "APN" + str(self.apn_n)
+        # Creation of dir with the name of the apn
+        os.makedirs(self.dest, exist_ok=True)
+        source_dir = self.src + "/DCIM/"
 
-        dataDir = Main().config.get('data-dir')
-        src = self.foundMountedPath()  # Where is mounted devname
+        for dir in os.listdir(source_dir):
+            dir_path = source_dir + dir
+            logger.info("Copying started from %s to %s ...", dir_path, self.dest)
+            # Get only JPG file
+            files = glob.iglob(os.path.join(dir_path, "*.JPG"))
+            images = glob.iglob(os.path.join(dir_path, "*.JPG"))
+            l = len(list(images))
+            self.printProgressBar(0, l, prefix="APN" + str(self.apn_n), suffix='Complete', length=50)
+            i = 0
+            for file in files:
+                if os.path.isfile(file):
+                    i = i + 1
+                    dest_dir = self.dest + "/" + os.path.split(os.path.split(file)[0])[1] + "_" + os.path.split(file)[1]
+                    command = "cp " + file + " " + dest_dir
+                    self.printProgressBar(i, l, prefix="APN" + str(self.apn_n), suffix='Complete', length=50)
+                    os.system(command)
 
-        try:
-            apn_n = self.apn_conf['APN_num']  # read the APN number in config file
-        except KeyError:
-            logger.error("We don't know what is the number of APN, aborting")
-            return False
-        a = dataDir.format(campaign=Main().campaign)
-        dest = Path(a).expand() / "APN{}".format(apn_n)
-
-        dest.makedirs_p()
-
-        logger.info("Copying started from {} to {}".format(src, dest))
-
-        for f in src.walkfiles('*.JPG'):
-            f.copy(dest)
-
-        logger.info("Copying finished from {} to {}".format(src, dest))
-        Main().APN_copied(apn_n)
-
-        return ex
+        logger.info("... Copy finished")
+        return self.apn_n
 
     def mount(self):
         """
@@ -103,7 +117,9 @@ class APN_copy(threading.Thread):
         return False on error, True otherwise
         """
         try:
-            subprocess.call(['udisksctl', 'mount', '-b', self.devname])
+            p = subprocess.Popen(['udisksctl', 'mount', '-b', self.devname], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = p.communicate()
+            logger.info("... " + out.decode('ascii'))
         except subprocess.CalledProcessError:
             logger.error("{} not mounted".format(self.devname))
             return False
@@ -113,11 +129,11 @@ class APN_copy(threading.Thread):
         return True
 
     def unmount(self):
-        """
-        unmount devname using udisckctl
-        """
+        """Unmount devname using udisckctl."""
         try:
-            subprocess.call(['udisksctl', 'unmount', '-b', self.devname])
+            p = subprocess.Popen(['udisksctl', 'unmount', '-b', self.devname], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = p.communicate()
+            logger.info("... " + out.decode('ascii'))
         except subprocess.CalledProcessError:
             logger.error("{} not unmounted".format(self.devname))
         except FileNotFoundError:
@@ -138,25 +154,29 @@ class Main:
         if not self.pictInfoLocation:
             while not self.pictInfoLocation or self.pictInfoLocation != "0" and not os.path.exists(self.pictInfoLocation):
                 self.pictInfoLocation = input("Enter path where is located pictInfo on this PC (or 0 for fetching with scp): ")
-        logger.info("... CSV path : %s" % (self.pictInfoLocation))
-        logger.info("... Campaign : %s" % (self.campaign))
-        logger.info("... Let's work on : %s" % (self.config.get('data-dir')))
+        logger.info("* CSV path : %s" % (self.pictInfoLocation))
+        logger.info("* Campaign : %s" % (self.campaign))
 
-        pictInfoDir = self.config.get('data-dir')
-        pictInfoDir = os.path.expanduser(pictInfoDir.format(campaign=campaign))
-        ensure_dir(pictInfoDir)
-        dest = os.path.join(pictInfoDir, "pictureInfo.csv")
+        self.pictDir = self.config.get('data-dir')
+        self.pictDir = os.path.expanduser(self.pictDir.format(campaign=campaign))
+
+        os.makedirs(self.pictDir, exist_ok=True)
+        dest = os.path.join(self.pictDir, "pictureInfo.csv")
 
         if self.pictInfoLocation == "0":
             if not self.getPictureInfoFromPi(dest):
                 logger.critical("Can't get picture info from pi")
         else:
+            logger.info("Let's copy pictureInfo.csv in : %s ..." % (dest))
             copyfile(self.pictInfoLocation, dest)
-
+            logger.info("... copy done !")
+            logger.info("Let's import photos in : %s ..." % (self.pictDir))
         return self
 
     def APN_copied(self, apn_n):
+        """ Set as True when apn is finish to copy."""
         self.APN_treated[apn_n] = True
+        logger.info("APN %s finished", apn_n)
         if all(self.APN_treated):
             self.stop()
 
@@ -165,12 +185,9 @@ class Main:
         :device: the device where is situed the APN
         """
         devname = device['DEVNAME']
-        if 'parent' in device:
-            parent_devname = device.parent['DEVNAME']
-        else:
-            parent_devname = device['DEVNAME'][:-1]
-        logger.info("APN_connected : ", devname, "--", parent_devname)
-        APN_copy(devname, parent_devname)
+        logger.info("... APN detected on %s", devname)
+        APN_copy(devname, pictDir=self.pictDir)
+        self.APN_copied(apn_n)
 
     def getPictureInfoFromPi(self, dest):
         """
@@ -191,11 +208,18 @@ class Main:
 
     def start(self):
         if not self.campaign:
-            logging.critical('Any campaign specified')
+            logger.critical('Any campaign specified')
             return
 
         self.lock.clear()
-        WaitForSDCard().start()
+
+        self.context = pyudev.Context()
+        self.monitor = pyudev.Monitor.from_netlink(self.context)
+        self.monitor.filter_by(subsystem='block')
+
+        self.observer = pyudev.MonitorObserver(self.monitor, self.onEvent, name='OPV SD observer')
+        logger.info("You can plug SD cards in the hub")
+        self.observer.start()
 
         try:
             while not self.lock.is_set():
@@ -205,21 +229,6 @@ class Main:
 
     def stop(self):
         self.lock.set()
-        WaitForSDCard().stop()
-
-
-class WaitForSDCard:
-    def __init__(self):
-        self.context = pyudev.Context()
-        self.monitor = pyudev.Monitor.from_netlink(self.context)
-        self.monitor.filter_by(subsystem='block')
-
-        self.observer = pyudev.MonitorObserver(self.monitor, self.onEvent, name='OPV SD observer')
-
-    def start(self):
-        self.observer.start()
-
-    def stop(self):
         self.observer.stop()
 
     def onEvent(self, action, device: pyudev.Device):
@@ -227,6 +236,6 @@ class WaitForSDCard:
 
         :device: A pyudev device object
         """
-
         if action == "add" and 'DEVNAME' in device.keys() and "partition" in device.attributes.available_attributes:
-            Main().APN_connected(device)
+            logger.info("... Device detected")
+            self.APN_connected(device)

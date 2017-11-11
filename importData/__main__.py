@@ -32,8 +32,12 @@ Options:
     --dir-manager-uri=<str>     URI of the DirectoryManager [default: http://localhost:5001]
     --dir-manager-file          Tells directory manager to use local hardlinking or copy.
                                 Use this option if you are on the DirectoryManager server manager to speed up transferts.
+                                You should also set dir-manager-tmp to a directory on the same partition (partition of the picture files)
+                                so that hardlinks work.
+    --dir-manager-tmp=<str>     Tells the DirectoryManagerClient where is it's tempory directory.
 
     --api-uri=<str>             URI of the DirectoryManager [default: http://localhost:5000]
+    --debug                     Set logs to debug.
 """
 
 from . import managedb
@@ -51,7 +55,7 @@ from opv_directorymanagerclient import DirectoryManagerClient, Protocol
 import logging
 
 formatter_f = logging.Formatter('%(asctime)s %(name)-25s %(levelname)-8s %(message)s')
-formatter_c = logging.Formatter('%(name)-25s: %(levelname)-8s %(message)s')
+formatter_c = logging.Formatter('%(name)-30s: %(levelname)-8s %(message)s')
 
 fh = logging.FileHandler('/tmp/importData.log')
 ch = logging.StreamHandler()
@@ -66,16 +70,18 @@ rootLogger = logging.getLogger('importData')
 rootLogger.addHandler(ch)
 rootLogger.addHandler(fh)
 
-rootLogger.setLevel(logging.DEBUG)
-
 
 logger = logging.getLogger('importData.' + __name__)
+
 
 def main():
     """ Import Images from SD """
     # Read the __doc__ and build the Arguments
     args = docopt(__doc__)
     f_args = dict()
+
+    # logs
+    rootLogger.setLevel(logging.DEBUG if "--debug" in args and args["--debug"] else logging.INFO)
 
     # Convert args
     for n in ['clean-sd', 'import', 'treat', 'export', 'dir-manager-file']:
@@ -110,23 +116,28 @@ def main():
 
     if conf.get('import'):
         logger.info("=================================================")
-        logger.info("===== Let's import the image from SD card =======")
+        logger.info("======= Let's import images from SD cards =======")
 
-        logger.info("Get data from SD card ...")
         Main().init(conf.get('campaign'), conf).start()
         logger.info("... Done ! Data recover.")
+        return
 
     if conf.get('treat'):
         logger.info("=================================================")
         logger.info("================ Treating data  =================")
 
-        protocol = Protocol.FILE if conf['dir-manager-file'] else Protocol.FTP
-        dir_manager_client = DirectoryManagerClient(api_base=conf['dir-manager-uri'], default_protocol=protocol)
+        dm_client_args = {}
+        if '--dir-manager-tmp' in args and args['--dir-manager-tmp'] is not None and Path(args['--dir-manager-tmp']).isdir():
+            dm_client_args["workspace_directory"] = args['--dir-manager-tmp']
+
+        dm_client_args["default_protocol"] = Protocol.FILE if conf['dir-manager-file'] else Protocol.FTP
+        dm_client_args["api_base"] = conf['dir-manager-uri']
+        dir_manager_client = DirectoryManagerClient(**dm_client_args)
         logger.info(srcDir)
         refFirst = conf.get("ref") == 'first'
         logger.info("FirstLotRef = " + str(refFirst))
         for l in makeLots(srcDir, csvFile, firstLotRef=refFirst):
-            lot = treat(id_malette, campaign, l, dir_manager_client)
+            treat(id_malette, campaign, l, dir_manager_client, hardlinking=conf['dir-manager-file'])
             # lot object can't be send through network
             if conf.get('export'):  # send to task queue
                 pass
