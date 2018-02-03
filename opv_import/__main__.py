@@ -137,6 +137,8 @@ def main():
         refFirst = conf.get("ref") == 'first'
         logger.info("FirstLotRef = " + str(refFirst))
         for l in makeLots(srcDir, csvFile, firstLotRef=refFirst):
+            logger.debug("-- main --")
+            logger.debug(l)
             treat(id_malette, campaign, l, dir_manager_client, hardlinking=conf['dir-manager-file'])
             # lot object can't be send through network
             if conf.get('export'):  # send to task queue

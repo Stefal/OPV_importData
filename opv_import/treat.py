@@ -34,6 +34,8 @@ def copyImages(lot, dir_manager_client, hardlink=False):
 
 def treat(id_malette, campaign, l, dir_manager_client, hardlinking=False):
     """ Push hard in DB and return lot"""
+    logger.debug(" -- treat --")
+    logger.debug(l)
     try:
         sensorsData = l['csv'].data
     except KeyError:
@@ -42,7 +44,8 @@ def treat(id_malette, campaign, l, dir_manager_client, hardlinking=False):
                        'takenDate': 0,
                        'goproFailed': 0}
 
-
+    logger.debug("-- sensorsData --")
+    logger.debug(sensorsData)
     sensors = managedb.make_sensors(id_malette,
                                     lng = sensorsData['gps']['lon'],
                                     alt = sensorsData['gps']['alt'],

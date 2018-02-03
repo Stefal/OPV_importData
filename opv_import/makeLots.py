@@ -2,84 +2,40 @@
 # coding: utf-8
 
 import re
-import csv
-from collections import namedtuple, defaultdict
-
+import logging
 from path import Path
 from os import walk, listdir
-
-import time
-import logging
-import datetime
-import exifread
+from collections import namedtuple, defaultdict
+from opv_import.pictures_utils import read_exif_time as pic_read_exif_time
+from opv_import.rederbro_utils import read_rederbro_csv
 
 logger = logging.getLogger("importData." + __name__)
+
+# -- Script description
+# 1 - make GoPro lot (ImageSet)
+# 2 - filter and group rederbro CSV datas
+# 3 - execute search reference algorithm for each group of rederbro CSV data
+# 4 - associate data with found references
 
 
 ###
 # Data Structures
 ###
-
 Photo = namedtuple("Photo", ["timestamp", "path"])
 Csv = namedtuple("Csv", ["timestamp", "data"])
+
+# TODO : use a real model in this package !! namedtuple shouldn't be in this file, we should have one for sensors data also
 
 ###
 # utilities fct to list images
 ###
 
-
-def readEXIFTime(picPath: str) -> int:
-    """
-    Read DateTimeOriginal tag from exif data
-    return timestamp
-    """
-    with open(picPath, "rb") as f:
-        tags = exifread.process_file(f, stop_tag='EXIF DateTimeOriginal')
-
-    # timestamp = int(time.mktime(datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values, "%Y:%m:%d %H:%M:%S").timetuple()))
-    timestamp = int(datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values, "%Y:%m:%d %H:%M:%S").timestamp())
-
-    return timestamp
-
-
-def listImgsByAPN_old(srcDir: str) -> dict:
-    """
-    return the list of all images in srcDir and sort them by APN
-    """
-    logger.info("Start listing images")
-    r = re.compile('^/?APN[0-9]+(.+)?')
-    j = re.compile('.+\.(jpeg|jpg)', re.IGNORECASE)
-
-    def isJpg(x):
-        """return true if string x finish by jpg/jpeg"""
-        return j.match(x)
-
-    def isAPN(x):
-        """return true if string x is APN* """
-        return r.match(x)
-
-    imgListByApn = defaultdict(list)
-
-    for dirpath, _, filenames in walk(srcDir):
-        # logger.debug(dirpath)
-        relative_dir_path = dirpath.replace(srcDir, "")
-        logger.debug("relative_dir_path : " + relative_dir_path)
-        if isAPN(relative_dir_path):
-            imgListByApn[dirpath] = [Path(dirpath) / f for f in filenames if isJpg(f)]
-
-            if len(imgListByApn[dirpath]) == 0:
-                logger.warning("No image founded in {}".format(dirpath))
-
-    # logger.debug(imgListByApn)
-    logger.info("All images listed")
-    return imgListByApn
-
-def listImgsByAPN(srcDir: str):
+def listImgsByAPN(src_dir: str):
     """
     Fetch all images in srcDir under APNx directories (and their subdirectories).
     Return them in a dict where the key is the apnNo the value a list a images Path.
 
-    :param srcDir: Source directory should contain APN[0-9] subdirectories with images (images might be under subdirectories it also works)
+    :param srcDir: Source directory should contain APN[0-9] subdirectories with images (images might be under subdirectories it also works
     :return: Return them in a dict where the key is the apnNo the value a list a images Path.
              {0: [Path("srcDir/APN0/sudir/img.jpg"), .....], 1: [Path("srcDir/APN1/img.jpg"), .....], ... 6: [...] }
     """
@@ -118,9 +74,9 @@ def listImgsByAPN(srcDir: str):
                     pics.append(Path(dirpath) / f)
         return pics
 
-    for apnDir in listdir(srcDir):  # Fetch cameras folders
+    for apnDir in listdir(src_dir):  # Fetch cameras folders
         if isAPN(apnDir):  # check it's a camera folder
-            fullpath = Path(srcDir) / apnDir
+            fullpath = Path(src_dir) / apnDir
             apnNo = getApnNum(fullpath)
             imgListByApn[apnNo] = getAllPic(fullpath)   # getting all pictures in it and it's subdirectories
 
@@ -132,8 +88,7 @@ def listImgsByAPN(srcDir: str):
     return imgListByApn
 
 def getImgData(p: str) -> Photo:
-    return Photo(readEXIFTime(p), Path(p))
-
+    return Photo(pic_read_exif_time(p), Path(p))
 
 def getImgsData(srcDir: str) -> dict:
     """
@@ -144,7 +99,6 @@ def getImgsData(srcDir: str) -> dict:
     logger.debug("Images with ts : ")
     logger.debug(imgData)
     return imgData
-
 
 def getImgsDataBis(srcDir: str):
     """
@@ -163,6 +117,7 @@ def getImgsDataBis(srcDir: str):
             imgData[apnNo].append(getImgData(imgPath))
 
     return imgData
+
 ###
 # Utilies fct to help finding lots
 ###
@@ -173,6 +128,7 @@ def sortAPNByTimestamp(apns, reverse=False):
     apnSorted = {apn: sorted(vals, key=lambda x: x.timestamp, reverse=reverse) for apn, vals in apns.items()}
 
     return apnSorted
+
 
 def findOffset(apns, method=max):
     """
@@ -219,9 +175,10 @@ def makeLots(srcDir: str, csvFile: str, firstLotRef=True) -> list:
     """
     logger.info("Starting making lots")
     epsilon = 6
+    counters = {"no_csv": 0, "null_gps": 0}
 
     data = getImgsData(srcDir)
-    data['csv'] = readCSV(csvFile)
+    data['csv'] = read_rederbro_csv(csvFile)
 
     data = levelTimestamps(data, method=min if firstLotRef else max)
     data = sortAPNByTimestamp(data)
@@ -261,60 +218,18 @@ def makeLots(srcDir: str, csvFile: str, firstLotRef=True) -> list:
         for k in keys:
             changed_data = True
             lot[k] = data[k][0]
+            logger.debug("-- makeLots --")
+            logger.debug(lot)
             del data[k][0]
+
+        if not("csv" in lot):
+            logger.warning("No CSV associated")
+            counters["no_csv"] += 1
+            counters["null_gps"] += 1
+        elif float(lot["csv"].data['gps']['lon']) == 0 and float(lot["csv"].data['gps']['lat']) == 0:
+            counters["null_gps"] += 1
 
         yield lot
 
     logger.info("All lots generated")
-
-
-def readCSV(csv_path: str) -> list:
-    """
-    Read the CSV file which correspond to the operation
-    CSV is
-    timestamp,lat,long,alt,degree°minutes,goproFailed
-    return a list of Csv
-    """
-    data = []
-
-    passHeader = False
-    with open(csv_path, 'r') as csvFile:
-        d = csv.reader(csvFile, delimiter=';')
-        for row in d:
-
-            # pass the first line
-            if not passHeader:
-                passHeader = True
-                continue
-
-            # prevent empty lines
-            if len(row) == 0:
-                continue
-
-            # Convert data in a more writable way
-            timestamp = int(time.mktime(time.strptime(row[0])))
-            lat = float(row[1])
-            lng = float(row[2])
-            alt = float(row[3])
-            degree, minutes = row[4].split('\u00b0')
-            minutes = minutes.replace(" ", "").replace("'", "")
-            degree = float(degree)
-            minutes = float(minutes)
-            goproFailed = int(row[5])
-
-            sensorsMeta = {
-                "takenDate": timestamp,
-                "gps": {
-                    "lat": lat,
-                    "lon": lng,
-                    "alt": alt
-                },
-                "compass": {
-                    "degree": degree,
-                    "minutes": minutes
-                },
-                "goproFailed": goproFailed
-            }
-
-            data.append(Csv(timestamp, sensorsMeta))
-    return data
+    logger.info(counters)

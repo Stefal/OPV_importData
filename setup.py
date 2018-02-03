@@ -4,7 +4,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='importData',
+    name='opv_import',
     packages=find_packages(),
     author="",
     author_email="",
