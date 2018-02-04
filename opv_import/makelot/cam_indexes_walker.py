@@ -31,21 +31,7 @@
 #                    [3, 1, 0]
 
 from typing import List, Iterator
-
-def bit_len(int_type: int) -> int:
-    """
-    Returns int_type length, position of last non 0 bit.
-
-    :param int_type: An int value.
-    :type int_type: int
-    :return: position of last non 0 bit.
-    :rtype: int
-    """
-    length = 0
-    while (int_type):
-        int_type >>= 1
-        length += 1
-    return(length)
+from opv_import.makelot.utils import bit_len
 
 def get_bit_pos_in_global_index(apn_no: int, cam_bit_pos: int, nb_cams: int) -> int:
     """

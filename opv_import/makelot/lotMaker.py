@@ -48,6 +48,7 @@ class LotMaker:
         self.pictures_path = pictures_path
         self.nb_cams = nb_cams
         self.fetchers = None
+        self.rederbrometa = None
 
     def load_cam_images(self) -> List[CameraImageFetcher]:
         """
@@ -185,8 +186,6 @@ class LotMaker:
             set_count = 0
             img_set_generator = self.cam_lot_generator(reference_set=cam_set)
             for gen_img_set in img_set_generator:
-                print("gen_img_set")
-                print(gen_img_set)
                 set_count += 1
                 gp_sets.append(gen_img_set)
                 if gen_img_set.is_complete():
@@ -199,9 +198,17 @@ class LotMaker:
                 if (incomplete_sets_count > max_incomplete_sets or
                         incomplete_consecutive_sets_count > max_consecutive_incomplete_sets):
                     reject = True
+                    print("incomplete_sets_count")
+                    print(incomplete_sets_count)
+                    print("incomplete_consecutive_sets_count")
+                    print(incomplete_consecutive_sets_count)
                     print("exit A")
                     break
                 if set_count >= lot_count_for_test:
+                    print("incomplete_sets_count")
+                    print(incomplete_sets_count)
+                    print("incomplete_consecutive_sets_count")
+                    print(incomplete_consecutive_sets_count)
                     print("exit B")
                     break
 

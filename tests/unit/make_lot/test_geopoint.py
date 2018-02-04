@@ -12,11 +12,18 @@
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from opv_import.makelot.cameraImage import CameraImage
+# Contributors: Benjamin BERNARD <benjamin.bernard@openpathview.fr>
+# Email: team@openpathview.fr
+# Description: Unit test GeoPoint representation.
+
 from opv_import.makelot.geopoint import GeoPoint
-from opv_import.makelot.imageSet import ImageSet
-from opv_import.makelot.rederbrometa import RederbroMeta, OrientationAngle
-from opv_import.makelot.metacsvparser import MetaCsvParser
-from opv_import.makelot.cameraImageFetcher import CameraImageFetcher
-from opv_import.makelot.cam_indexes_walker import indexes_walk
-from opv_import.makelot.lotMaker import LotMaker
+
+class TestGeoPoint(object):
+
+    def test_all(self):
+        p = GeoPoint(lat=44.987137, lon=6.482013, alt=1522.112)
+
+        assert p.lon == 6.482013, "Longitude isn't well set"
+        assert p.lat == 44.987137, "La isn't well set"
+        assert p.alt == 1522.112, "Longitude isn't well set"
+        assert p.coordinates == [44.987137, 6.482013, 1522.112]

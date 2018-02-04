@@ -12,11 +12,21 @@
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from opv_import.makelot.cameraImage import CameraImage
-from opv_import.makelot.geopoint import GeoPoint
-from opv_import.makelot.imageSet import ImageSet
-from opv_import.makelot.rederbrometa import RederbroMeta, OrientationAngle
-from opv_import.makelot.metacsvparser import MetaCsvParser
-from opv_import.makelot.cameraImageFetcher import CameraImageFetcher
-from opv_import.makelot.cam_indexes_walker import indexes_walk
-from opv_import.makelot.lotMaker import LotMaker
+# Contributors: Benjamin BERNARD <benjamin.bernard@openpathview.fr>
+# Email: team@openpathview.fr
+# Description: Utils for makelot.
+
+def bit_len(int_type: int) -> int:
+    """
+    Returns int_type length, position of last non 0 bit.
+
+    :param int_type: An int value.
+    :type int_type: int
+    :return: position of last non 0 bit.
+    :rtype: int
+    """
+    length = 0
+    while (int_type):
+        int_type >>= 1
+        length += 1
+    return(length)

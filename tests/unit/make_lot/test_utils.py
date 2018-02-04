@@ -12,11 +12,15 @@
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from opv_import.makelot.cameraImage import CameraImage
-from opv_import.makelot.geopoint import GeoPoint
-from opv_import.makelot.imageSet import ImageSet
-from opv_import.makelot.rederbrometa import RederbroMeta, OrientationAngle
-from opv_import.makelot.metacsvparser import MetaCsvParser
-from opv_import.makelot.cameraImageFetcher import CameraImageFetcher
-from opv_import.makelot.cam_indexes_walker import indexes_walk
-from opv_import.makelot.lotMaker import LotMaker
+# Contributors: Benjamin BERNARD <benjamin.bernard@openpathview.fr>
+# Email: team@openpathview.fr
+# Description: Unit test for utils.
+
+import opv_import.makelot.utils as ut
+
+def test_bit_len():
+    assert ut.bit_len(0) == 0, "Wrong bit length"
+    assert ut.bit_len(1) == 1, "Wrong bit length"
+    assert ut.bit_len(2) == 2, "Wrong bit length"
+    assert ut.bit_len(3) == 2, "Wrong bit length"
+    assert ut.bit_len(4) == 3, "Wrong bit length"

@@ -18,13 +18,6 @@
 
 import opv_import.makelot.cam_indexes_walker as iwalker
 
-def test_bit_len():
-    assert iwalker.bit_len(0) == 0, "Wrong bit length"
-    assert iwalker.bit_len(1) == 1, "Wrong bit length"
-    assert iwalker.bit_len(2) == 2, "Wrong bit length"
-    assert iwalker.bit_len(3) == 2, "Wrong bit length"
-    assert iwalker.bit_len(4) == 3, "Wrong bit length"
-
 def test_get_bit_pos_in_global_index():
     assert iwalker.get_bit_pos_in_global_index(apn_no=0, cam_bit_pos=0, nb_cams=3) == 0, "Wrong bit position"
     assert iwalker.get_bit_pos_in_global_index(apn_no=3, cam_bit_pos=0, nb_cams=3) == 3, "Wrong bit position"
