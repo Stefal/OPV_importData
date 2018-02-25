@@ -88,7 +88,7 @@ def get_global_index(list_cam_indexes: List[int]) -> int:
             global_index |= bit_val << get_bit_pos_in_global_index(apn_no=apn_no, cam_bit_pos=bit_pos, nb_cams=nb_cams)
     return global_index
 
-def indexes_walk(nb_cams: int, cam_max_indexes: List[int]) -> Iterator[List[int]]:
+def indexes_walk(nb_cams: int, cam_max_indexes: List[int], cam_start_indexes: List[int]=None) -> Iterator[List[int]]:
     """
     Generate list of camera indexes in an optimized order.
 
@@ -96,21 +96,28 @@ def indexes_walk(nb_cams: int, cam_max_indexes: List[int]) -> Iterator[List[int]
     :type nb_cams: int
     :param cam_max_indexes: list of camera max indexes (pos 0 for apn0 max indexes or number of pic, ...)
     :type cam_max_indexes: List[int]
+    :param cam_start_indexes: Start indexes, Default will start a 0.
+    :type cam_start_indexes: List[int]
     :return: Generator, generate list of camera indexes in optimal order for test references.
     :rtype: Iterator[List[int]]
     """
     next_global_index = 0
+    cam_start_indexes = [0] * nb_cams if cam_start_indexes is None else cam_start_indexes
+
+    indexes_shift = cam_start_indexes
+
     last_global_index = get_global_index(cam_max_indexes)
     nb_of_bit_per_index = bit_len(max(cam_max_indexes))
 
     def is_valid_cam_indexes(cam_indexes):
         for apn_no in range(0, nb_cams):
-            if cam_indexes[apn_no] > cam_max_indexes[apn_no]:
+            if cam_indexes[apn_no] > cam_max_indexes[apn_no] or cam_indexes[apn_no] < cam_start_indexes[apn_no]:
                 return False
         return True
 
     while next_global_index <= last_global_index:
         cam_indexes = get_cam_indexes(global_index=next_global_index, nb_cams=nb_cams, nb_of_bit_per_index=nb_of_bit_per_index)
+        cam_indexes = [cam_indexes[i] + indexes_shift[i] for i in range(0, nb_cams)]
 
         if is_valid_cam_indexes(cam_indexes):
             yield cam_indexes

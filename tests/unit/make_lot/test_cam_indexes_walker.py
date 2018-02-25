@@ -33,8 +33,11 @@ def test_get_global_index():
 
 def test_indexes_walk():
     gen = iwalker.indexes_walk(nb_cams=2, cam_max_indexes=[3, 3])
+    gen_with_start = iwalker.indexes_walk(nb_cams=2, cam_max_indexes=[3, 3], cam_start_indexes=[1, 2])
 
     assert gen.__next__() == [0, 0]
     assert gen.__next__() == [1, 0]
     assert gen.__next__() == [0, 1]
     assert gen.__next__() == [1, 1]
+    assert gen_with_start.__next__() == [1, 2]
+    assert gen_with_start.__next__() == [2, 2]
