@@ -16,19 +16,36 @@
 # Email: team@openpathview.fr
 # Description: Lot Maker, takes CSV en pictures and manage them to get coherent set of datas.
 
+import copy
 from path import Path
-from typing import List, Iterator
+from typing import List, Iterator, Dict, Tuple, NamedTuple
 from collections import namedtuple
 from opv_import import OpvImportError
-from opv_import.makelot import ImageSet, CameraImageFetcher, indexes_walk
+from opv_import.makelot import ImageSet, CameraImageFetcher, indexes_walk, RederbroMeta, MetaCsvParser, Lot, CameraImage
 
-TIME_MARGING = 2  # max time difference accepted in picture exif metadata
+import datetime
+def dt(ts):
+    return datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+
+TIME_MARGING = 3  # max time difference accepted in picture exif metadata
 CAM_DCIM_PATH = "APN{}/DCIM"
 REF_SEARCH_NB_LOT_GENERATED = 30  # default number lot generated for camera set reference search
 REF_SEARCH_MAX_INCOMPLET_CONSECUTIVE_SET = 7  # Maximum number of accepted consecutive incomplete sets during reference search
 REF_SEARCH_MAX_INCOMPLET_SETS = 10  # Maximum total number of incomplete sets during reference search
 
+# TODO convert all to typed NamedTuple
 SearchedRefImgSet = namedtuple('SearchedReferenceImgSet', ['ref_set', 'first_img_sets', 'img_set_generator'])
+SearchRefMeta = namedtuple('SearchRefMeta', ['index_meta', 'index_cam_set'])
+CameraSetPartition = NamedTuple('CameraSetPartition', [
+    ('ref_set', ImageSet),
+    ('images_sets', List[ImageSet]),
+    ('start_indexes', List[int]),
+    ('fetcher_next_indexes', List[int]),
+    ('break_reason', str),
+    ('number_of_incomplete_sets', int),
+    ('number_of_complete_sets', int),
+    ('max_consecutive_incomplete_sets', int)])
+ImageSetWithFetcherIndexes = NamedTuple('ImageSetWithFetcherIndexes', [('fetcher_next_indexes', List[int]), ('set', ImageSet)])
 
 class LotMaker:
 
@@ -86,12 +103,14 @@ class LotMaker:
             },
             number_of_pictures=self.nb_cams)
 
-    def cam_lot_generator(self, reference_set: ImageSet) -> Iterator[ImageSet]:
+    def cam_set_generator(self, reference_set: ImageSet, start_indexes: List[int]=None) -> Iterator[ImageSetWithFetcherIndexes]:
         """
         Generate all lot (event incomplete).
 
         :param reference_set: Reference set used to level ts and generate image sets.
         :type reference_set: ImageSet
+        :param start_indexes: Start with this list of indexes, will ignore images before.
+        :type start_indexes: List[int]
         :return: An Iterator of the generated images sets.
         :rtype: Iterator[ImageSet]
         """
@@ -99,17 +118,34 @@ class LotMaker:
             raise InvalidReferenceSetError()
 
         ref_ts = {apn_no: reference_set[apn_no].get_timestamp() for apn_no in range(0, self.nb_cams)}
-        n_i = [0] * self.nb_cams   # next indexes Start at the begining (oldest images)
+        print("ref_ts : ", ref_ts)
         last_indexes = [max(f.nb_pic() - 1, 0) for f in self.fetchers]
+
+        n_i = start_indexes if start_indexes is not None else [0] * self.nb_cams   # next indexes Start at the begining (oldest images)
+
+        cam_img = None  # init for last cam images (back in time issue)
 
         while n_i <= last_indexes:
             # compute leveled ts DONE
             # list cam in accepted zone
             # compute new next_indexes
+
+            last_cam = cam_img
             cam_img = self.get_images(n_i)
+
+            # detecting back in time issu with cameras timestamp
+            if last_cam is not None:
+                back_in_time_apns = cam_img.get_pic_taken_before(img_set=last_cam)
+                if back_in_time_apns != []:
+                    print(back_in_time_apns)
+                    pic_path = {apnid: (last_cam[apnid], cam_img[apnid]) for apnid in back_in_time_apns}
+                    raise CameraBackInTimeError(indexes=n_i, pictures_paths=pic_path)  # TODO unit test it
+
             leveled_ts = {apn_no: img.get_timestamp() - ref_ts[apn_no] for apn_no, img in cam_img.items()}
+            print("leveled_ts : ", leveled_ts)
             oldest_leveled_ts = min(leveled_ts.values())
             cam_no_in_acceptance = [apn_no for apn_no, lvl_ts in leveled_ts.items() if abs(lvl_ts - oldest_leveled_ts) < TIME_MARGING]
+            print("cam_no_in_acceptance : ", cam_no_in_acceptance)
 
             # increment consumed indexes
             img_set = ImageSet(l={}, number_of_pictures=self.nb_cams)
@@ -118,14 +154,20 @@ class LotMaker:
                     img_set[apn_no] = cam_img[apn_no]
                     n_i[apn_no] += 1
 
-            yield img_set
+            yield ImageSetWithFetcherIndexes(set=img_set, fetcher_next_indexes=n_i)
 
-    def make_gopro_lot(self, reference_set: ImageSet) -> List[ImageSet]:
+    def make_gopro_lot(self, reference_set: ImageSet) -> List[ImageSet]:   # TODO change it top handle partitionment (back in time)
         """
         Generate sets of images based on a reference set.
+
+        :param reference_set: Reference set used to generate images sets.
+        :type reference_set: ImageSet
+        :return: List of generate images sets, only complete ones.
+        :rtype: List[ImageSet]
         """
         gopro_lot = []
-        for img_set in self.cam_lot_generator(reference_set=reference_set):
+        for img_set_with_fetchers_indexes in self.cam_set_generator(reference_set=reference_set):
+            img_set = img_set_with_fetchers_indexes.set
             if img_set.is_complete():
                 gopro_lot.append(img_set)
         return gopro_lot
@@ -172,6 +214,7 @@ class LotMaker:
             cam_set = self.get_images(cam_indexes)
             print('cam_set')
             print(cam_set)
+            input()
 
             # check it's not a similar indexes to what we already tested
             for s in tested_set:
@@ -184,10 +227,12 @@ class LotMaker:
             reject = False
             gp_sets = []
             set_count = 0
-            img_set_generator = self.cam_lot_generator(reference_set=cam_set)
-            for gen_img_set in img_set_generator:
+            img_set_generator = self.cam_set_generator(reference_set=cam_set)
+            for gen_img_set_with_fetcher_indexes in img_set_generator:
+                gen_img_set = gen_img_set_with_fetcher_indexes.set
                 set_count += 1
                 gp_sets.append(gen_img_set)
+                print(gen_img_set)
                 if gen_img_set.is_complete():
                     incomplete_consecutive_sets_count = 0
                 else:
@@ -203,6 +248,7 @@ class LotMaker:
                     print("incomplete_consecutive_sets_count")
                     print(incomplete_consecutive_sets_count)
                     print("exit A")
+                    input()
                     break
                 if set_count >= lot_count_for_test:
                     print("incomplete_sets_count")
@@ -210,12 +256,221 @@ class LotMaker:
                     print("incomplete_consecutive_sets_count")
                     print(incomplete_consecutive_sets_count)
                     print("exit B")
+                    input()
                     break
 
             tested_set.append(cam_set)
             if not reject:
                 yield SearchedRefImgSet(ref_set=cam_set, first_img_sets=gp_sets, img_set_generator=img_set_generator)
 
+    def make_gopro_set_new(
+            self,
+            threshold_max_consecutive_incomplete_sets,
+            threshold_incomplete_set_window_size,
+            threshold_incomplete_set_max_in_window) -> List[ImageSet]:
+        """
+        """
+        cam_max_indexes = [f.nb_pic() - 1 for f in self.fetchers]
+        current_indexes = [0] * self.nb_cams
+        set_partitions = []
+
+        # partition while indexes aren't all consumed
+        while current_indexes < cam_max_indexes:
+            partition_start = current_indexes
+
+            p = self.generate_cam_partition(
+                partition_start,
+                threshold_max_consecutive_incomplete_sets,
+                threshold_incomplete_set_window_size,
+                threshold_incomplete_set_max_in_window)
+            set_partitions.append(p)
+            current_indexes = p.fetcher_next_indexes
+
+        # compile partitions
+        gp_sets = []
+        # compile partitions into gp_sets TODO
+        return gp_sets
+
+    def generate_cam_partition(
+            self,
+            partition_start,
+            threshold_max_consecutive_incomplete_sets,
+            threshold_incomplete_set_window_size,
+            threshold_incomplete_set_max_in_window) -> CameraSetPartition:
+        """
+        """
+        # test/search reference cycle
+        cam_max_indexes = [f.nb_pic() - 1 for f in self.fetchers]
+        tested_set = []
+        break_reason = "NORMAL"   # change it with constant
+        fetcher_next_indexes = [0] * self.nb_cams
+
+        # TODO handle window incomplete set count
+
+        indexe_gen = indexes_walk(nb_cams=self.nb_cams, cam_start_indexes=partition_start, cam_max_indexes=cam_max_indexes)
+        for cam_indexes in indexe_gen:
+            print("lm - cam_indexes: ", cam_indexes)
+            cam_set = self.get_images(cam_indexes)
+            print('cam_set')
+            print(cam_set)
+
+            if cam_indexes == [4, 4, 4, 6, 5, 4]:
+                input()
+
+            # check it's not a similar indexes to what we already tested
+            for s in tested_set:
+                if self.is_equiv_ref(s, cam_set):
+                    continue
+
+            # Test cam_set as reference set
+            incomplete_consecutive_sets_count = 0
+            reject = False
+            gp_sets = []
+            break_reason = 'NORMAL'
+            incomplete_set_count = 0
+            complete_set_count = 0
+            img_set_generator = self.cam_set_generator(reference_set=cam_set, start_indexes=list(fetcher_next_indexes))
+            max_consecutive_incomplete_sets = 0
+            try:
+                for gen_img_set_with_fetcher_indexes in img_set_generator:
+                    gen_img_set = gen_img_set_with_fetcher_indexes.set
+                    print("gen_img_set", gen_img_set)
+                    gp_sets.append(gen_img_set)
+                    if gen_img_set.is_complete():
+                        complete_set_count += 1
+                        max_consecutive_incomplete_sets = max(max_consecutive_incomplete_sets, incomplete_consecutive_sets_count)
+                        incomplete_consecutive_sets_count = 0
+                    else:
+                        incomplete_consecutive_sets_count += 1
+                        incomplete_set_count += 1
+
+                    # rejection or stop conditions
+                    if (incomplete_consecutive_sets_count > threshold_max_consecutive_incomplete_sets):
+                        reject = True
+                        print("incomplete_consecutive_sets_count")
+                        print(incomplete_consecutive_sets_count)
+                        print("exit A")
+                        # input()
+                        break
+
+                if not reject:
+                    fetcher_next_indexes = gen_img_set_with_fetcher_indexes.fetcher_next_indexes
+                    print("fetcher_next_indexes: ", fetcher_next_indexes)
+            except CameraBackInTimeError as backintime_err:
+                break_reason = "BACK IN TIME"
+                print("backintime_err: ", backintime_err)
+                fetcher_next_indexes = backintime_err.indexes  # Next indexes has this indexes weren't used to make an actual set
+
+            tested_set.append(cam_set)
+            if not reject:
+                # generator should not suggest already used image, setting start indexes to the end of the partition
+                print("indexe_gen.send")
+                print(fetcher_next_indexes)
+                indexe_gen.send(list(fetcher_next_indexes))  # copy list so that there are no reference issues
+
+                # returning the generated partition
+                yield CameraSetPartition(
+                    ref_set=cam_set, images_sets=gp_sets,
+                    start_indexes=partition_start, fetcher_next_indexes=fetcher_next_indexes,
+                    break_reason=break_reason, number_of_incomplete_sets=incomplete_set_count,
+                    number_of_complete_sets=complete_set_count,
+                    max_consecutive_incomplete_sets=incomplete_consecutive_sets_count)
+
+    def load_metas(self) -> List[RederbroMeta]:
+        """
+        Use parser and fetcher RederbroMeta.
+
+        :return: RederbroMeta
+        :rtype: List[RederbroMeta]
+        """
+        if self.rederbrometa is None:
+            self.rederbrometa = MetaCsvParser(csv_path=self.rederbro_csv_path)
+
+        return self.rederbrometa.get_metas()
+
+    def find_meta_ref(self, img_sets: List[ImageSet]) -> SearchRefMeta:  # TODO : test it using PNEcrins J1/J2/J3
+        EPSILON = 3
+        metas = self.rederbrometa.get_metas()
+        max_meta_index = len(metas)
+        max_img_set_index = len(img_sets)
+
+        # testing different references
+        for meta_cam_indexes in indexes_walk(nb_cams=2, cam_max_indexes=[max_meta_index, max_img_set_index]):
+            meta_start = meta_cam_indexes[0]
+            img_set_start = meta_cam_indexes[1]
+            print("Testing with reference indexes : meta_start: ", meta_start, " | img_set_start: ", img_set_start)
+            print("Start meta set :")
+            print(metas[meta_start])
+            print("Image start set")
+            print(img_sets[img_set_start])
+            print("--")
+
+            lots = []
+
+            last_index_meta = meta_start
+            last_index_img = img_set_start
+            next_index_meta = meta_start + 1
+            next_index_img = img_set_start + 1
+
+            reject = False
+
+            # Generating lot for current reference
+            while not reject and next_index_meta < max_meta_index and next_index_img < max_img_set_index:
+                print("next_index_meta : ", next_index_meta, " | next_index_img : ", next_index_img)
+                last_meta_was_errored = metas[last_index_meta].has_error()
+
+                diff_meta = metas[next_index_meta].timestamp - metas[last_index_meta].timestamp
+                diff_cam = img_sets[next_index_img][0].get_timestamp() - img_sets[last_index_img][0].get_timestamp()
+
+                print("diff_cam - next date : ", dt(img_sets[next_index_img][0].get_timestamp()), " | last date : ", dt(img_sets[last_index_img][0].get_timestamp()))
+
+                print("diff_meta : ", diff_meta, " | diff_cam : ", diff_cam)
+                # input()
+
+                if diff_meta < diff_cam and abs(diff_meta - diff_cam) > EPSILON:  # CSV entries have less difference than img_sets entries
+                    if (
+                        not metas[next_index_meta].has_error() and
+                        not last_meta_was_errored and img_sets[next_index_img].is_complete()
+                    ):
+                        reject = True
+                elif diff_meta > diff_cam and abs(diff_meta - diff_cam) > EPSILON:
+                    reject = True
+
+                if reject:
+                    print("REJECTED")
+                    continue
+
+                if not reject:
+                    lots.append(Lot(meta=metas[next_index_meta], cam_set=img_sets[last_index_img]))
+                    last_index_meta = next_index_meta
+                    last_index_img = next_index_img
+                    next_index_meta += 1
+                    next_index_img += 1
+                    # make association and continue
+                    # create a representation of both data
+
+            if not reject:
+                print("!!!!!!!!!!!!!!!!!!! Got it !!!!!!!!!!!!!")
 
 class InvalidReferenceSetError(OpvImportError):
     pass
+
+class CameraBackInTimeError(OpvImportError):
+
+    def __init__(self, indexes: List[int]=None, pictures_paths: Dict[int, Tuple[CameraImage, CameraImage]]={}):
+        """
+        When back in time issue detected on at least 1 camera pictures.
+
+        :param indexes: indexes where back in time where detected (back in time bewteen indexes[x]-1 and indexes).
+        :type indexes: List[int]
+        :param pictures_paths: Couple of pictures path that have the back in time issu for each affected camera.
+                                Eg {0: (CamImg("APN0/picA.jpg", ts=10), CamImg("APN0/picB", ts=5))}
+        :type pictures_paths: Dict[int, Tuple[CameraImage, CameraImage]
+        """
+        self.indexes = indexes
+        self.pictures_paths = pictures_paths
+
+        Exception.__init__(self, self.__repr__())
+
+    def __repr__(self) -> str:
+        return "Back in time at indexes {} between thoses pictures : {}".format(str(self.indexes), str(self.pictures_paths))

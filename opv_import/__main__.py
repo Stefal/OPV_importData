@@ -35,6 +35,8 @@ Options:
                                 You should also set dir-manager-tmp to a directory on the same partition (partition of the picture files)
                                 so that hardlinks work.
     --dir-manager-tmp=<str>     Tells the DirectoryManagerClient where is it's tempory directory.
+    --makelot-new-version       Make camera lot using the new algorithm, actually this algorithm is under developpment and doesn't handle CSV metadata
+                                This new version doesn't handle import from SD card so you need to set the datadir.
 
     --api-uri=<str>             URI of the DirectoryManager [default: http://localhost:5000]
     --debug                     Set logs to debug.
@@ -51,6 +53,8 @@ from path import Path
 from docopt import docopt
 
 from opv_directorymanagerclient import DirectoryManagerClient, Protocol
+
+from opv_import.makelot import LotMaker
 
 import logging
 
@@ -82,9 +86,11 @@ def main():
 
     # logs
     rootLogger.setLevel(logging.DEBUG if "--debug" in args and args["--debug"] else logging.INFO)
+    ch.setLevel(rootLogger.getEffectiveLevel())
+    fh.setLevel(rootLogger.getEffectiveLevel())
 
     # Convert args
-    for n in ['clean-sd', 'import', 'treat', 'export', 'dir-manager-file']:
+    for n in ['clean-sd', 'import', 'treat', 'export', 'dir-manager-file', 'makelot-new-version']:
         f_args[n] = convert_args(args, n, True)
     for n in ['api-uri', 'dir-manager-uri', 'config-file', 'data-dir', 'lots-output-dir', 'id-rederbro', 'description', 'csv-path', 'ref']:
         f_args[n] = convert_args(args, n)
@@ -113,6 +119,50 @@ def main():
     srcDir = Path(conf["data-dir"].format(campaign=conf.get('campaign'))).expand()
     # CSV path from args if it exist, fallback to data directory
     csvFile = Path(conf['csv-path']) if 'csv-path' in conf else Path(srcDir) / "pictureInfo.csv"
+
+    if conf.get('makelot-new-version'):
+        logger.info("Choose makelot-new-version algorithm.")
+        lm = LotMaker(pictures_path=srcDir, rederbro_csv_path=None, nb_cams=6)
+        lm.load_cam_images()
+        partition_gen = lm.generate_cam_partition(
+            partition_start=[0, 0, 0, 0, 0, 0],
+            threshold_max_consecutive_incomplete_sets=2,
+            threshold_incomplete_set_window_size=None,
+            threshold_incomplete_set_max_in_window=None)
+        partitions = list()
+
+        # generating partitions of ImageSet
+        for partition in partition_gen:
+            partitions.append(partition)
+            logger.debug("---------------------------")
+            logger.debug(partition)
+            logger.debug("partition.number_of_incomplete_sets: {}".format(partition.number_of_incomplete_sets))
+            logger.debug("partition.number_of_complete_sets: {}".format(partition.number_of_complete_sets))
+            logger.debug("len(partition.images_sets): {}".format(len(partition.images_sets)))
+
+        # instanciating DirectoryManagerClient
+        dm_client_args = {}
+        if '--dir-manager-tmp' in args and args['--dir-manager-tmp'] is not None and Path(args['--dir-manager-tmp']).isdir():
+            dm_client_args["workspace_directory"] = args['--dir-manager-tmp']
+
+        dm_client_args["default_protocol"] = Protocol.FILE if conf['dir-manager-file'] else Protocol.FTP
+        dm_client_args["api_base"] = conf['dir-manager-uri']
+        dir_manager_client = DirectoryManagerClient(**dm_client_args)
+
+        # inserting ImageSets in the database and dm
+        logger.info("Listing images sets from partitions and inserting them into OPV-API OPV-DM")
+        for part in partitions:
+            for img_set in part.images_sets:
+                if img_set.is_complete():
+                    logger.debug(img_set)
+
+                    # map to lot
+                    l = img_set
+
+                    # inserting data in DB
+                    treat(id_malette, campaign, l, dir_manager_client, hardlinking=conf['dir-manager-file'])
+
+        return
 
     if conf.get('import'):
         logger.info("=================================================")

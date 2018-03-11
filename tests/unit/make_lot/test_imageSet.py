@@ -16,8 +16,8 @@
 # Email: team@openpathview.fr
 # Description: Unit test image set.
 
-from unittest.mock import patch
-from opv_import import ImageSet
+from unittest.mock import patch, MagicMock
+from opv_import import ImageSet, CameraImage
 
 class TestImageSet(object):
 
@@ -40,3 +40,20 @@ class TestImageSet(object):
         img_set = ImageSet(l=self.get_list_camera_image(nb_pic=nb_img + 1), number_of_pictures=nb_img)
 
         assert not img_set.is_complete(), "Complete set should be incomplete"
+
+    def test_get_pic_taken_before(self):
+        nb_img = 2
+
+        def get_img_mock_with_ts(ts):
+            img = MagicMock(spec=CameraImage)
+            img.get_timestamp.return_value = ts
+            return img
+
+        img_set_a = ImageSet(l={0: get_img_mock_with_ts(5), 1: get_img_mock_with_ts(10)}, number_of_pictures=nb_img)
+        img_set_b = ImageSet(l={0: get_img_mock_with_ts(0), 1: get_img_mock_with_ts(20)}, number_of_pictures=nb_img)
+        img_set_c = ImageSet(l={0: get_img_mock_with_ts(2), 1: get_img_mock_with_ts(1)}, number_of_pictures=nb_img)
+        img_set_d = ImageSet(l={0: get_img_mock_with_ts(10), 1: get_img_mock_with_ts(40)}, number_of_pictures=nb_img)
+
+        assert img_set_a.get_pic_taken_before(img_set=img_set_b) == [1], "Set with one image before"
+        assert img_set_a.get_pic_taken_before(img_set=img_set_c) == [], "Should not have images taken before"
+        assert img_set_a.get_pic_taken_before(img_set=img_set_d) == [0, 1], "Mutiple images taken before"

@@ -42,3 +42,26 @@ class TestRederbroMeta(object):
         assert not meta.has_took_picture(apn_id=0)
         assert meta.has_took_picture(apn_id=1)
         assert not meta.has_took_picture(apn_id=10)
+
+    @patch("opv_import.makelot.geopoint.GeoPoint")
+    def test_has_error(self, mock_geopt):
+        p = mock_geopt()
+        o = OrientationAngle(degree=2, minutes=3)
+
+        meta_err = RederbroMeta(timestamp=2, geopoint=p, orientation=o, gopro_errors={0: False, 1: True})
+        meta_ok = RederbroMeta(timestamp=2, geopoint=p, orientation=o, gopro_errors={0: False, 1: False})
+        assert meta_err.has_error()
+        assert not meta_ok.has_error()
+
+    @patch("opv_import.makelot.geopoint.GeoPoint")
+    @patch("opv_import.makelot.geopoint.GeoPoint.__eq__")
+    def test_eq(self, mock_geopt, mock_geopt_eq):
+        p = mock_geopt()
+        o = OrientationAngle(degree=2, minutes=3)
+        meta_a = RederbroMeta(timestamp=3, geopoint=p, orientation=o, gopro_errors={0: False, 1: True})
+        meta_b = RederbroMeta(timestamp=2, geopoint=p, orientation=o, gopro_errors={0: False, 1: False})
+        meta_c = RederbroMeta(timestamp=2, geopoint=p, orientation=o, gopro_errors={0: False, 1: False})
+
+        mock_geopt_eq.side_effect = [False, True]
+        assert meta_a != meta_b, "Meta equality"
+        assert meta_b == meta_c

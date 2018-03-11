@@ -28,8 +28,8 @@ setup(
     url='https://github.com/OpenPathView/OPV_importData',
     entry_points={
         'console_scripts': [
-            'opv-import = importData.__main__:main',
-            'opv-clean-sd = importData.cleanSD:main',
+            'opv-import = opv_import.__main__:main',
+            'opv-clean-sd = opv_import.cleanSD:main',
         ],
     }
 )

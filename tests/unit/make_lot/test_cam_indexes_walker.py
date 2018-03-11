@@ -16,6 +16,7 @@
 # Email: team@openpathview.fr
 # Description: Unit test for walk util functions.
 
+import pytest
 import opv_import.makelot.cam_indexes_walker as iwalker
 
 def test_get_bit_pos_in_global_index():
@@ -34,6 +35,7 @@ def test_get_global_index():
 def test_indexes_walk():
     gen = iwalker.indexes_walk(nb_cams=2, cam_max_indexes=[3, 3])
     gen_with_start = iwalker.indexes_walk(nb_cams=2, cam_max_indexes=[3, 3], cam_start_indexes=[1, 2])
+    gen_send = iwalker.indexes_walk(nb_cams=2, cam_max_indexes=[4, 4], cam_start_indexes=[1, 2])
 
     assert gen.__next__() == [0, 0]
     assert gen.__next__() == [1, 0]
@@ -41,3 +43,14 @@ def test_indexes_walk():
     assert gen.__next__() == [1, 1]
     assert gen_with_start.__next__() == [1, 2]
     assert gen_with_start.__next__() == [2, 2]
+    assert gen_send.__next__() == [1, 2]
+    gen_send.send([2, 3])
+    assert gen_send.__next__() == [2, 3]
+    assert gen_send.__next__() == [3, 3]
+
+def test_indexes_walk_send_excceded():
+    gen = iwalker.indexes_walk(nb_cams=2, cam_max_indexes=[3, 3])
+    next(gen)
+    gen.send([3, 4])
+    with pytest.raises(StopIteration) as excinfo:
+        next(gen)

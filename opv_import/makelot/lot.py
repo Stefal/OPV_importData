@@ -12,12 +12,14 @@
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from opv_import.makelot.cameraImage import CameraImage
-from opv_import.makelot.geopoint import GeoPoint
-from opv_import.makelot.imageSet import ImageSet
-from opv_import.makelot.rederbrometa import RederbroMeta, OrientationAngle
-from opv_import.makelot.metacsvparser import MetaCsvParser
-from opv_import.makelot.lot import Lot
-from opv_import.makelot.cameraImageFetcher import CameraImageFetcher
-from opv_import.makelot.cam_indexes_walker import indexes_walk
-from opv_import.makelot.lotMaker import LotMaker, CameraBackInTimeError
+# Contributors: Benjamin BERNARD <benjamin.bernard@openpathview.fr>
+# Email: team@openpathview.fr
+# Description: Lot represent img_set + meta.
+
+from opv_import.makelot import RederbroMeta, ImageSet
+
+class Lot():
+
+    def __init__(self, meta: RederbroMeta=None, cam_set: ImageSet=None):
+        self.meta = meta
+        self.cam_set = cam_set

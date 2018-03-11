@@ -20,10 +20,27 @@ from opv_import.makelot.geopoint import GeoPoint
 
 class TestGeoPoint(object):
 
-    def test_all(self):
+    def test_properties(self):
         p = GeoPoint(lat=44.987137, lon=6.482013, alt=1522.112)
 
         assert p.lon == 6.482013, "Longitude isn't well set"
         assert p.lat == 44.987137, "La isn't well set"
         assert p.alt == 1522.112, "Longitude isn't well set"
         assert p.coordinates == [44.987137, 6.482013, 1522.112]
+
+    def test_eq(self):
+        pa = GeoPoint(lat=44.987137, lon=6.482013, alt=1522.112)
+        pb = GeoPoint(lat=44.987137, lon=6.482013, alt=18)
+        pc = GeoPoint(lat=44.987137, lon=2, alt=1522.112)
+        pd = GeoPoint(lat=44, lon=6.482013, alt=1522.112)
+        pabis = GeoPoint(lat=44.987137, lon=6.482013, alt=1522.112)
+
+        assert pa == pabis, "Equality test, should be equals"
+        assert pa != pb, "Altitude are different"
+        assert pa != pc, "Longitude are different"
+        assert pa != pd, "Latitude are different"
+
+    def test_repr(self):
+        p = GeoPoint(lat=44.987137, lon=6.482013, alt=1522.112)
+
+        assert p.__repr__() == "GeoPoint(lon: 6.482013, lat: 44.987137, alt: 1522.112)"

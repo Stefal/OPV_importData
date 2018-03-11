@@ -16,7 +16,7 @@
 # Email: team@openpathview.fr
 # Description: Represent a image set, image set are several images used to make a panorama.
 
-from typing import Dict
+from typing import Dict, List
 from collections import UserDict
 from opv_import.makelot import CameraImage
 
@@ -24,7 +24,7 @@ IMAGESET_DEFAULT_SIZE = 6  # should be somewhere else
 
 class ImageSet(UserDict):
 
-    def __init__(self, l: Dict[int, CameraImage] = {}, number_of_pictures: int = IMAGESET_DEFAULT_SIZE):
+    def __init__(self, l: Dict[int, CameraImage]={}, number_of_pictures: int=IMAGESET_DEFAULT_SIZE):
         """
         Initialize a set of pictures.
 
@@ -34,7 +34,7 @@ class ImageSet(UserDict):
         UserDict.__init__(self, l)
         self.number_of_pictures = number_of_pictures
 
-    def is_complete(self):
+    def is_complete(self) -> bool:
         """
         Check if the set is complete.
 
@@ -42,3 +42,21 @@ class ImageSet(UserDict):
         :rtype: bool
         """
         return len(self.data) == self.number_of_pictures
+
+    def get_pic_taken_before(self, img_set: 'ImageSet') -> List[int]:
+        """
+        Compare current camera images timestamps to img_set camera images timestamps.
+        If at least one camera (let say cam number "x") picture of current set as a taken date before the same camera (cam "x") picture of img_set return True.
+        This method might be used to detect anormal set with pictures taken before some other set (back in time issues).
+
+        :param img_set: Image set that should be have pictures taken after current set.
+        :type img_set: ImageSet
+        :return: List of apn_id of pictures in current set, taken before img_set.
+        :rtype: List[int]
+        """
+        ids = []
+        for apn_id in self.data.keys():
+            if apn_id in img_set and self.data[apn_id].get_timestamp() < img_set[apn_id].get_timestamp():
+                ids.append(apn_id)
+
+        return ids

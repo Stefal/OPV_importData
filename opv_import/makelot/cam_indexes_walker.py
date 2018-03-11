@@ -106,7 +106,6 @@ def indexes_walk(nb_cams: int, cam_max_indexes: List[int], cam_start_indexes: Li
 
     indexes_shift = cam_start_indexes
 
-    last_global_index = get_global_index(cam_max_indexes)
     nb_of_bit_per_index = bit_len(max(cam_max_indexes))
 
     def is_valid_cam_indexes(cam_indexes):
@@ -115,11 +114,21 @@ def indexes_walk(nb_cams: int, cam_max_indexes: List[int], cam_start_indexes: Li
                 return False
         return True
 
-    while next_global_index <= last_global_index:
-        cam_indexes = get_cam_indexes(global_index=next_global_index, nb_cams=nb_cams, nb_of_bit_per_index=nb_of_bit_per_index)
-        cam_indexes = [cam_indexes[i] + indexes_shift[i] for i in range(0, nb_cams)]
+    cam_indexes = get_cam_indexes(global_index=next_global_index, nb_cams=nb_cams, nb_of_bit_per_index=nb_of_bit_per_index)
+    cam_indexes = [cam_indexes[i] + indexes_shift[i] for i in range(0, nb_cams)]
 
+    while is_valid_cam_indexes(cam_indexes):
+        new_start_indexes = None
         if is_valid_cam_indexes(cam_indexes):
-            yield cam_indexes
+            new_start_indexes = yield cam_indexes
 
         next_global_index += 1
+
+        if new_start_indexes is not None:  # start indexes change, use .send(new_start_indexes)
+            yield new_start_indexes  # so that send and the next "next()" will have the same value
+            cam_start_indexes = new_start_indexes
+            next_global_index = 0
+            indexes_shift = cam_start_indexes
+
+        cam_indexes = get_cam_indexes(global_index=next_global_index, nb_cams=nb_cams, nb_of_bit_per_index=nb_of_bit_per_index)
+        cam_indexes = [cam_indexes[i] + indexes_shift[i] for i in range(0, nb_cams)]

@@ -16,6 +16,7 @@
 # Email: team@openpathview.fr
 # Description: Represent rederbro CSV meta data.
 
+import datetime
 from typing import Dict
 from collections import namedtuple
 from opv_import.makelot import GeoPoint
@@ -39,6 +40,7 @@ class RederbroMeta():
         """
         self.timestamp = timestamp
         self.orientation = orientation
+        self.geopoint = geopoint
         self.gopro_errors = gopro_errors
 
     def has_took_picture(self, apn_id: int) -> bool:
@@ -52,9 +54,39 @@ class RederbroMeta():
         """
         return self.gopro_errors[apn_id] if apn_id in self.gopro_errors else False
 
-    def __eq__(ma, mb):
+    def has_error(self) -> bool:
+        """
+        Indicate if at least one camera had an error.
+
+        :return: True if an error occured
+        :rtype: bool
+        """
+        for statut in self.gopro_errors.values():
+            if statut:
+                return True
+        return False
+
+    def __eq__(ma, mb) -> bool:
+        """
+        Equality between 2 meta data.
+
+        :param ma: First rederbro meta (current/self)
+        :param mb: Second rederbor meta.
+        :return: True if both are the same.
+        :rtype: bool
+        """
         return (
             ma.timestamp == mb.timestamp and
             ma.orientation == mb.orientation and
+            ma.geopoint == mb.geopoint and
             ma.gopro_errors == mb.gopro_errors
         )
+
+    def __repr__(self) -> str:
+        """
+        Printable version of a rederbro meta.
+
+        :return: Printable representation of a meta.
+        """
+        d = datetime.datetime.fromtimestamp(self.timestamp)
+        return "RederbroMeta(date: {}, orientation: {}, gopro_errors: {})".format(d.ctime(), self.orientation, self.gopro_errors)
