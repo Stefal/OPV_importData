@@ -23,3 +23,6 @@ class Lot():
     def __init__(self, meta: RederbroMeta=None, cam_set: ImageSet=None):
         self.meta = meta
         self.cam_set = cam_set
+
+    def __repr__(self):
+        return "Lot(meta: {}, cam_set={})".format(repr(self.meta), repr(self.cam_set))

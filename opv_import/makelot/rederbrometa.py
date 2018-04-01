@@ -42,6 +42,7 @@ class RederbroMeta():
         self.orientation = orientation
         self.geopoint = geopoint
         self.gopro_errors = gopro_errors
+        self.id_meta = None  # for dev and debug purposes
 
     def has_took_picture(self, apn_id: int) -> bool:
         """
@@ -66,6 +67,15 @@ class RederbroMeta():
                 return True
         return False
 
+    def get_timestamp(self) -> int:
+        """
+        Get meta timestamp.
+
+        :return: the timestamp.
+        :rtype: int
+        """
+        return self.timestamp
+
     def __eq__(ma, mb) -> bool:
         """
         Equality between 2 meta data.
@@ -89,4 +99,4 @@ class RederbroMeta():
         :return: Printable representation of a meta.
         """
         d = datetime.datetime.fromtimestamp(self.timestamp)
-        return "RederbroMeta(date: {}, orientation: {}, gopro_errors: {})".format(d.ctime(), self.orientation, self.gopro_errors)
+        return "RederbroMeta(id_meta: {}, date: {}, orientation: {}, gopro_errors: {}, geopoint: {})".format(self.id_meta, d.ctime(), self.orientation, self.gopro_errors, self.geopoint)

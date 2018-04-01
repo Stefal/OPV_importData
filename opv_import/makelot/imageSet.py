@@ -33,6 +33,7 @@ class ImageSet(UserDict):
         """
         UserDict.__init__(self, l)
         self.number_of_pictures = number_of_pictures
+        self.id_set = None  # for dev and debug purposes
 
     def is_complete(self) -> bool:
         """

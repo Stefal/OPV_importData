@@ -82,6 +82,7 @@ class MetaCsvParser():
         passHeader = False
         with open(self._csv_path, 'r') as csvFile:
             d = csv.reader(csvFile, skipinitialspace=True, delimiter=';')
+            id_meta = 0
             for row in d:
 
                 # pass the first line
@@ -103,6 +104,10 @@ class MetaCsvParser():
                 gp_err = self._map_gp_error(csv_goprofailled=row[5])
 
                 meta = RederbroMeta(timestamp=timestamp, geopoint=point, orientation=orientation, gopro_errors=gp_err)
+
+                # debug and tracking purposes
+                meta.id_meta = id_meta
+                id_meta += 1
 
                 metas.append(meta)
 
