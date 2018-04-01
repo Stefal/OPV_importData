@@ -522,6 +522,42 @@ class LotMaker:
 
             yield LotWithIndexes(next_meta_index=n_i[K_META], next_img_set_index=n_i[K_SET], lot=lot_with_acceptance)
 
+    def correct_missing_meta_or_set(self, lots: List[Lot]) -> List[Lot]:
+        """
+        Correct lot when 1 lot has a missing meta and the following lot has missing set.
+
+        :param lots: List of lots to be corrected.
+        :return: The corrected list of lots.
+        """
+        result = []
+        might_be_corrected = []
+        for l in lots:
+            if l.meta is not None and l.cam_set is not None:
+                # Try to merge lots
+                if len(might_be_corrected) == 2:
+                    la = might_be_corrected[0]
+                    lb = might_be_corrected[1]
+
+                    if la.meta is None and lb.meta is not None:  # merging meta
+                        la.meta = lb.meta
+                    if la.cam_set is None and lb.cam_set is not None:  # merging cam_set
+                        la.cam_set = lb.cam_set
+
+                    # adding corrected set
+                    result.append(la)
+                    might_be_corrected = []
+            else:
+                might_be_corrected.append(l)
+
+            if len(might_be_corrected) > 2:  # empty set as we will ne correct if they are more than 2 incomplete sets
+                result.extend(might_be_corrected)
+                might_be_corrected = []
+
+            if l.meta is not None and l.cam_set is not None:  # append set if complete
+                result.append(l)
+
+        return result
+
     def generate_meta_cam_partitions(
             self,
             img_sets: List[ImageSet],
@@ -637,6 +673,8 @@ class LotMaker:
                     if sum(success_window) == len(success_window):
                         # import pdb; pdb.set_trace()
                         print("---> Saving back point (fetcher_next_indexes)")
+                        lot_since_last_save = self.correct_missing_meta_or_set(lot_since_last_save)  # Correct lot simple lot_since_last_save
+
                         lots.extend(lot_since_last_save)   # adding set to generated sets
                         lot_since_last_save = []   # clearing set since last save has we just save this point
                         fetcher_next_indexes = [lot_with_indexes.next_meta_index, lot_with_indexes.next_img_set_index]

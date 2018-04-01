@@ -19,7 +19,7 @@
 import pytest
 import opv_import
 from path import Path
-from opv_import.makelot import LotMaker, CameraImage, ImageSet, CameraImageFetcher, MetaCsvParser, CameraBackInTimeError
+from opv_import.makelot import LotMaker, CameraImage, ImageSet, CameraImageFetcher, MetaCsvParser, CameraBackInTimeError, RederbroMeta, Lot
 from opv_import.makelot.lotMaker import SearchedRefImgSet, ImageSetWithFetcherIndexes
 from unittest.mock import patch, call, DEFAULT
 
@@ -268,6 +268,27 @@ class TestLotMaker(object):
     #     assert first_ref == set_1, "Frist valid reference set found is not valid"
     #     assert first_sets == [incomplete_set_first, set_1, second_incomplet_set, set_2], "First images set not found"
 
+    def test_correct_missing_meta_or_set_ok(self):
+        lm = LotMaker(pictures_path=None, rederbro_csv_path="toto.csv", nb_cams=2)
+        la = Lot(meta=RederbroMeta(timestamp=2), cam_set=ImageSet())
+        lb = Lot(meta=None, cam_set=ImageSet())
+        lc = Lot(meta=RederbroMeta(timestamp=5), cam_set=None)
+        ld = Lot(meta=RederbroMeta(timestamp=5), cam_set=ImageSet())
+        le = Lot(meta=None, cam_set=ImageSet())
+        lf = Lot(meta=None, cam_set=ImageSet())
+        lg = Lot(meta=None, cam_set=ImageSet())
+        lots = [la, lb, lc, ld, le, lf, lg]
+        result = lm.correct_missing_meta_or_set(lots)
+
+        assert len(result) == 6, "Incorrect number of lots"
+        assert result[0] == la
+        assert result[1].meta == lc.meta
+        assert result[1].cam_set == lb.cam_set
+        assert result[2] == ld  # ld
+        assert result[3] == le  # le
+        assert result[4] == lf  # lf
+        assert result[5] == lg  # lg
+
     @patch("opv_import.makelot.MetaCsvParser.__init__")
     @patch("opv_import.makelot.MetaCsvParser.get_metas")
     def test_load_metas(self, mock_parser_metas, mock_parser_init):
@@ -284,5 +305,4 @@ class TestLotMaker(object):
         assert r == mock_parser_metas.return_value
 
     def test_inte_find_meta_ref(self):
-
         pass
