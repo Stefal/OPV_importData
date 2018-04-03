@@ -43,7 +43,7 @@ Options:
 """
 
 from . import managedb
-from .treat import treat
+from .treat import treat, treat_new
 from .importSD import Main
 from .makeLots import makeLots
 from .utils import Config, convert_args
@@ -54,7 +54,7 @@ from docopt import docopt
 
 from opv_directorymanagerclient import DirectoryManagerClient, Protocol
 
-from opv_import.makelot import LotMaker
+from opv_import.makelot import LotMaker, Lot
 
 import logging
 
@@ -77,7 +77,6 @@ rootLogger.addHandler(fh)
 
 logger = logging.getLogger('importData.' + __name__)
 
-
 def main():
     """ Import Images from SD """
     # Read the __doc__ and build the Arguments
@@ -86,6 +85,10 @@ def main():
 
     # logs
     rootLogger.setLevel(logging.DEBUG if "--debug" in args and args["--debug"] else logging.INFO)
+    loggerLM = logging.getLogger("opv_import.makelot.lotMaker.LotMaker")
+    loggerLM.setLevel(logging.DEBUG)
+    loggerLM.addHandler(ch)
+    loggerLM.addHandler(fh)
     ch.setLevel(rootLogger.getEffectiveLevel())
     fh.setLevel(rootLogger.getEffectiveLevel())
 
@@ -122,25 +125,23 @@ def main():
 
     if conf.get('makelot-new-version'):
         logger.info("Choose makelot-new-version algorithm.")
-        lm = LotMaker(pictures_path=srcDir, rederbro_csv_path=None, nb_cams=6)
+        lm = LotMaker(pictures_path=srcDir, rederbro_csv_path=csvFile, nb_cams=6)
         lm.load_cam_images()
-        partition_gen = lm.generate_cam_partition(
-            partition_start=[0, 0, 0, 0, 0, 0],
-            threshold_max_consecutive_incomplete_sets=2,
-            threshold_incomplete_set_window_size=None,
-            threshold_incomplete_set_max_in_window=None)
-        partitions = list()
 
-        # generating partitions of ImageSet
-        for partition in partition_gen:
-            partitions.append(partition)
-            logger.debug("---------------------------")
-            logger.debug(partition)
-            logger.debug("partition.number_of_incomplete_sets: {}".format(partition.number_of_incomplete_sets))
-            logger.debug("partition.number_of_complete_sets: {}".format(partition.number_of_complete_sets))
-            logger.debug("len(partition.images_sets): {}".format(len(partition.images_sets)))
+        logger.info("Making camera sets ...")
+        cam_sets = lm.make_gopro_set_new(threshold_max_consecutive_incomplete_sets=35)
 
-        # instanciating DirectoryManagerClient
+        if csvFile is not None:
+            lm.load_metas()
+            lots = lm.generate_all_lot(
+                img_sets=cam_sets,
+                threshold_max_consecutive_incomplete_sets=35,
+                threshold_incomplete_set_window_size=10,
+                threshold_incomplete_set_max_in_window=4)
+        else:
+            lots = [Lot(cam_set=s, meta=None) for s in cam_sets]
+
+        # instanciating DirectoryManagerCliLotent
         dm_client_args = {}
         if '--dir-manager-tmp' in args and args['--dir-manager-tmp'] is not None and Path(args['--dir-manager-tmp']).isdir():
             dm_client_args["workspace_directory"] = args['--dir-manager-tmp']
@@ -151,16 +152,9 @@ def main():
 
         # inserting ImageSets in the database and dm
         logger.info("Listing images sets from partitions and inserting them into OPV-API OPV-DM")
-        for part in partitions:
-            for img_set in part.images_sets:
-                if img_set.is_complete():
-                    logger.debug(img_set)
-
-                    # map to lot
-                    l = img_set
-
-                    # inserting data in DB
-                    treat(id_malette, campaign, l, dir_manager_client, hardlinking=conf['dir-manager-file'])
+        for l in lots:
+            logger.info("Treating log : %r ", l)
+            treat_new(id_malette, campaign, l, dir_manager_client, hardlinking=conf['dir-manager-file'])
 
         return
 
