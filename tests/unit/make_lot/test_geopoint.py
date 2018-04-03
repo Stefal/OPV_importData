@@ -26,7 +26,9 @@ class TestGeoPoint(object):
         assert p.lon == 6.482013, "Longitude isn't well set"
         assert p.lat == 44.987137, "La isn't well set"
         assert p.alt == 1522.112, "Longitude isn't well set"
-        assert p.coordinates == [44.987137, 6.482013, 1522.112]
+        assert p.coordinates[0] == 44.987137
+        assert p.coordinates[1] == 6.482013
+        assert p.coordinates[2] == 1522.112
 
     def test_eq(self):
         pa = GeoPoint(lat=44.987137, lon=6.482013, alt=1522.112)

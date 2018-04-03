@@ -215,30 +215,6 @@ class TestLotMaker(object):
         assert lm.is_equiv_ref(set_1, set_2), "Set should be considered equivalent"
         assert not lm.is_equiv_ref(set_1, set_3), "Set should be considered not equivalent"
 
-    def test_make_gopro_lot_inte_mocked(self, fetcher_test_env):
-        lm = LotMaker(pictures_path=Path("picPath/"), rederbro_csv_path=None, nb_cams=2)
-        lm.load_cam_images()
-
-        set_1 = ImageSet(l={
-            0: cam_img("picPath/APN0/DCIM/100S3D_L/3D_L0001.JPG", offset_a + 10),
-            1: cam_img("picPath/APN1/DCIM/100S3D_L/3D_L0000.JPG", offset_b + 10)
-        })
-        set_2 = ImageSet(l={
-            0: cam_img("picPath/APN0/DCIM/101S3D_L/3D_L0000.JPG", offset_a + 20),
-            1: cam_img("picPath/APN1/DCIM/100S3D_L/3D_L0001.JPG", offset_b + 20)
-        })
-
-        reference_set = ImageSet(l={
-            0: cam_img("picPath/APN0/DCIM/100S3D_L/3D_L0001.JPG", offset_a + 10),  # SET 1 cam A
-            1: cam_img("picPath/APN1/DCIM/100S3D_L/3D_L0000.JPG", offset_b + 10)   # SET 1 cam B
-        })
-
-        gp_sets = lm.make_gopro_lot(reference_set=reference_set)
-        # gp_sets = None
-        expected_sets = [set_1, set_2]
-
-        assert gp_sets == expected_sets, "Correct sets weren't found"
-
     # def test_find_cam_img_set_ref_int_mocked(self, fetcher_test_env):
     #     lm = LotMaker(pictures_path=Path("picPath/"), rederbro_csv_path=None, nb_cams=2)
     #     lm.load_cam_images()
