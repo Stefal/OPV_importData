@@ -121,7 +121,7 @@ def main():
     # Case 2 : Go get the file on rederbro
     srcDir = Path(conf["data-dir"].format(campaign=conf.get('campaign'))).expand()
     # CSV path from args if it exist, fallback to data directory
-    csvFile = Path(conf['csv-path']) if 'csv-path' in conf else Path(srcDir) / "pictureInfo.csv"
+    csvFile = Path(conf['csv-path']) if 'csv-path' in conf else None
 
     if conf.get('makelot-new-version'):
         logger.info("Choose makelot-new-version algorithm.")
