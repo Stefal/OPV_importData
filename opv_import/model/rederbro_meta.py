@@ -18,10 +18,7 @@
 
 import datetime
 from typing import Dict
-from collections import namedtuple
-from opv_import.makelot import GeoPoint
-
-OrientationAngle = namedtuple("OrientationAngle", ["degree", "minutes"])
+from opv_import.model import GeoPoint, OrientationAngle
 
 class RederbroMeta():
 

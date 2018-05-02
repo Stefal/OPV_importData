@@ -17,11 +17,11 @@
 # Description: test rederbro CSV meta data.
 
 from unittest.mock import patch
-from opv_import.makelot import RederbroMeta, GeoPoint, OrientationAngle
+from opv_import.model import RederbroMeta, OrientationAngle
 
 class TestRederbroMeta(object):
 
-    @patch("opv_import.makelot.geopoint.GeoPoint")
+    @patch("opv_import.model.geo_point.GeoPoint")
     def test_init(self, mock_geopt):
         p = mock_geopt()
         o = OrientationAngle(degree=2, minutes=3)
@@ -32,7 +32,7 @@ class TestRederbroMeta(object):
         assert meta.orientation == o
         assert meta.gopro_errors == gp_err
 
-    @patch("opv_import.makelot.geopoint.GeoPoint")
+    @patch("opv_import.model.geo_point.GeoPoint")
     def test_has_took_picture(self, mock_geopt):
         p = mock_geopt()
         o = OrientationAngle(degree=2, minutes=3)
@@ -43,7 +43,7 @@ class TestRederbroMeta(object):
         assert meta.has_took_picture(apn_id=1)
         assert not meta.has_took_picture(apn_id=10)
 
-    @patch("opv_import.makelot.geopoint.GeoPoint")
+    @patch("opv_import.model.geo_point.GeoPoint")
     def test_has_error(self, mock_geopt):
         p = mock_geopt()
         o = OrientationAngle(degree=2, minutes=3)
@@ -53,8 +53,8 @@ class TestRederbroMeta(object):
         assert meta_err.has_error()
         assert not meta_ok.has_error()
 
-    @patch("opv_import.makelot.geopoint.GeoPoint")
-    @patch("opv_import.makelot.geopoint.GeoPoint.__eq__")
+    @patch("opv_import.model.geo_point.GeoPoint")
+    @patch("opv_import.model.geo_point.GeoPoint.__eq__")
     def test_eq(self, mock_geopt, mock_geopt_eq):
         p = mock_geopt()
         o = OrientationAngle(degree=2, minutes=3)

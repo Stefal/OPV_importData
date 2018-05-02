@@ -18,7 +18,7 @@
 
 from typing import Dict, List
 from collections import UserDict
-from opv_import.makelot import CameraImage
+from opv_import.model import CameraImage
 
 IMAGESET_DEFAULT_SIZE = 6  # should be somewhere else
 
@@ -47,7 +47,8 @@ class ImageSet(UserDict):
     def get_pic_taken_before(self, img_set: 'ImageSet') -> List[int]:
         """
         Compare current camera images timestamps to img_set camera images timestamps.
-        If at least one camera (let say cam number "x") picture of current set as a taken date before the same camera (cam "x") picture of img_set return True.
+        If at least one camera (let say cam number "x") picture of current set as a taken date before the same camera (cam "x")
+        picture of img_set return True.
         This method might be used to detect anormal set with pictures taken before some other set (back in time issues).
 
         :param img_set: Image set that should be have pictures taken after current set.

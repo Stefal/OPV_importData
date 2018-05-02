@@ -14,7 +14,13 @@
 
 # Contributors: Benjamin BERNARD <benjamin.bernard@openpathview.fr>
 # Email: team@openpathview.fr
+# Description: Unit test for utils.
 
-from opv_import import model
-from opv_import import helpers
-from opv_import import services
+import opv_import.helpers.bit_utils as ut
+
+def test_bit_len():
+    assert ut.bit_len(0) == 0, "Wrong bit length"
+    assert ut.bit_len(1) == 1, "Wrong bit length"
+    assert ut.bit_len(2) == 2, "Wrong bit length"
+    assert ut.bit_len(3) == 2, "Wrong bit length"
+    assert ut.bit_len(4) == 3, "Wrong bit length"

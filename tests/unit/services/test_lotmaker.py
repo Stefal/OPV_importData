@@ -17,27 +17,30 @@
 # Description: Unit test lot maker.
 
 import pytest
-import opv_import
 from path import Path
-from opv_import.makelot import LotMaker, CameraImage, ImageSet, CameraImageFetcher, MetaCsvParser, CameraBackInTimeError, RederbroMeta, Lot
-from opv_import.makelot.lotMaker import SearchedRefImgSet, ImageSetWithFetcherIndexes
+from opv_import.model import CameraImage, ImageSet, RederbroMeta, Lot
+from opv_import.services import LotMaker, CameraImageFetcher, CameraBackInTimeError
+from opv_import.services.lot_maker import ImageSetWithFetcherIndexes
 from unittest.mock import patch, call, DEFAULT
+
 
 def cam_img(p, ts):
     c = CameraImage(path=Path(p))
     c._ts = ts
     return c
 
+
 offset_a = 30
 offset_b = 40
+
 
 class TestLotMaker(object):
 
     def test__init__ok(self):
         pass
 
-    @patch("opv_import.makelot.CameraImageFetcher.__init__")
-    @patch("opv_import.makelot.CameraImageFetcher.fetch_images")
+    @patch("opv_import.services.CameraImageFetcher.__init__")
+    @patch("opv_import.services.CameraImageFetcher.fetch_images")
     def test_load_cam_images(self, mock_fetch_images, mock_fetchers_init):
         mock_fetchers_init.return_value = None
 
@@ -265,8 +268,8 @@ class TestLotMaker(object):
         assert result[4] == lf  # lf
         assert result[5] == lg  # lg
 
-    @patch("opv_import.makelot.MetaCsvParser.__init__")
-    @patch("opv_import.makelot.MetaCsvParser.get_metas")
+    @patch("opv_import.helpers.MetaCsvParser.__init__")
+    @patch("opv_import.helpers.MetaCsvParser.get_metas")
     def test_load_metas(self, mock_parser_metas, mock_parser_init):
         mock_parser_init.return_value = None
         mock_parser_metas.return_value = []

@@ -18,10 +18,11 @@
 
 import logging
 from path import Path
+from opv_import.helpers import indexes_walk
+from opv_import.services import CameraImageFetcher
 from typing import List, Iterator, Dict, Tuple, NamedTuple
-from collections import namedtuple
-from opv_import import OpvImportError
-from opv_import.makelot import ImageSet, CameraImageFetcher, indexes_walk, RederbroMeta, MetaCsvParser, Lot, CameraImage
+from opv_import.model import ImageSet, RederbroMeta, Lot, CameraImage, OpvImportError, CameraSetPartition, LotPartition
+from opv_import.helpers import MetaCsvParser
 
 import datetime
 def dt(ts):
@@ -38,26 +39,6 @@ THRESHOLD_WINDOW_SIZE = 10
 THRESHOLD_WINDOW_MAX_ERRORS = 6
 SUCCESS_WINDOW_SIZE_NEXT_PARTITION_START_SAVING_POINT = 10
 
-# TODO convert all to typed NamedTuple
-SearchedRefImgSet = namedtuple('SearchedReferenceImgSet', ['ref_set', 'first_img_sets', 'img_set_generator'])
-SearchRefMeta = namedtuple('SearchRefMeta', ['index_meta', 'index_cam_set'])
-CameraSetPartition = NamedTuple('CameraSetPartition', [
-    ('ref_set', ImageSet),
-    ('images_sets', List[ImageSet]),
-    ('start_indexes', List[int]),
-    ('fetcher_next_indexes', List[int]),
-    ('break_reason', str),
-    ('number_of_incomplete_sets', int),
-    ('number_of_complete_sets', int),
-    ('max_consecutive_incomplete_sets', int)])
-LotPartition = NamedTuple('LotPartition', [
-    ('ref_lot', Lot),
-    ('lots', List[Lot]),
-    ('start_imgset_index', int),
-    ('start_meta_index', int),
-    ('break_reason', str),
-    ('number_of_good_associations', int)
-])
 ImageSetWithFetcherIndexes = NamedTuple('ImageSetWithFetcherIndexes', [('fetcher_next_indexes', List[int]), ('set', ImageSet)])
 LotWithIndexes = NamedTuple('LotWithIndexes', [('next_meta_index', int), ('next_img_set_index', int), ('lot', Lot)])
 
@@ -628,6 +609,7 @@ class MetaBackInTimeError(OpvImportError):
 
     def __repr__(self) -> str:
         return "Back in time at meta/img_sets indexes {}.".format(str(self.indexes))
+
 
 class CameraBackInTimeError(OpvImportError):
 

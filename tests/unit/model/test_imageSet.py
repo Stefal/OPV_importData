@@ -17,11 +17,11 @@
 # Description: Unit test image set.
 
 from unittest.mock import patch, MagicMock
-from opv_import import ImageSet, CameraImage
+from opv_import.model import ImageSet, CameraImage
 
 class TestImageSet(object):
 
-    @patch("opv_import.makelot.cameraImage")
+    @patch("opv_import.model.camera_image")
     def get_list_camera_image(self, mock_camImg, nb_pic):
         r = {}
         for i in range(0, nb_pic):

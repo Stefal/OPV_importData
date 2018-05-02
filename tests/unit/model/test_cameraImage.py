@@ -18,15 +18,15 @@
 
 import pytest
 from unittest.mock import patch, call
-from opv_import import CameraImage
+from opv_import.model import CameraImage
 from path import Path
 
 class TestCameraImage(object):
 
-    @patch('opv_import.pictures_utils.read_exif_time')
+    @patch('opv_import.helpers.pictures_utils.read_exif_time')
     def test_get_timestamp_ok(self, pic_util_mock):
         ts = 10
-        path = "toto.jpg"
+        path = Path("toto.jpg")
         pic_util_mock.return_value = ts
         cam_pic = CameraImage(path=path)
         obtained_ts = cam_pic.get_timestamp()
@@ -39,9 +39,9 @@ class TestCameraImage(object):
         assert pic_util_mock.call_args_list[0] == call(path), "Exif reader was called with the wrong image path"
         assert obtained_ts == ts, "Wrong timestamp"
 
-    @patch('opv_import.pictures_utils.read_exif_time')
+    @patch('opv_import.helpers.pictures_utils.read_exif_time')
     def test_get_timestamp_failed(self, pic_util_mock):
-        path = "404.jpg"
+        path = Path("404.jpg")
         cam_pic = CameraImage(path=path)
 
         pic_util_mock.side_effect = FileNotFoundError

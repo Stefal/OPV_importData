@@ -17,7 +17,10 @@
 # Description: test rederbro CSV meta parser.
 
 from unittest.mock import patch, MagicMock, ANY
-from opv_import.makelot import MetaCsvParser, RederbroMeta, GeoPoint, OrientationAngle
+from opv_import.helpers import MetaCsvParser
+from opv_import.model import RederbroMeta, GeoPoint, OrientationAngle
+from path import Path
+
 
 class TestMetaCsvParser(object):
 
@@ -39,7 +42,7 @@ class TestMetaCsvParser(object):
         parser = object.__new__(MetaCsvParser)
         ts = parser._map_time(csv_date="Sat Oct 28 08:11:03 2017")
 
-        assert ts == 1509171063, "CSV date not correctly parsed"
+        assert ts == 1509178263, "CSV date not correctly parsed"  # UTC timestamp
 
     @patch("csv.reader")
     @patch("builtins.open", create=True)
@@ -53,41 +56,44 @@ class TestMetaCsvParser(object):
         ])
         mock_csv_reader.return_value = csv_mocked
 
-        parser = MetaCsvParser(csv_path="toto.csv")
+        parser = MetaCsvParser(csv_path=Path("toto.csv"))
         metas = parser.fetch_metas()
 
         expected_metas = [
             RederbroMeta(
-                timestamp=1509147572,  # Sat Oct 28 01:39:32 2017
+                timestamp=1509154772,  # Sat Oct 28 01:39:32 2017, UTC timestamp
                 geopoint=GeoPoint(lat=44.987811, lon=6.079870, alt=986.3),
-                orientation=OrientationAngle(degree=308, minutes=43),
+                orientation=OrientationAngle(degree=308.0, minutes=43.0),
                 gopro_errors={0: True, 1: True}
             ),
             RederbroMeta(
-                timestamp=1509147621,  # Sat Oct 28 01:40:21 2017
+                timestamp=1509154821,  # Sat Oct 28 01:40:21 2017, UTC timestamp
                 geopoint=GeoPoint(lat=44.987778, lon=6.079897, alt=986.463),
-                orientation=OrientationAngle(degree=329, minutes=37),
+                orientation=OrientationAngle(degree=329.0, minutes=37.0),
                 gopro_errors={0: True, 1: False}
             )
         ]
+
+        expected_metas[0].id_meta = 0
+        expected_metas[1].id_meta = 1
 
         mock_open.assert_called_with("toto.csv", 'r')
         mock_csv_reader.assert_called_with(ANY, skipinitialspace=True, delimiter=';')
 
         assert metas == expected_metas, "Wrong meta from parsing"
 
-    @patch("opv_import.makelot.metacsvparser.MetaCsvParser.fetch_metas")
+    @patch("opv_import.helpers.meta_csv_parser.MetaCsvParser.fetch_metas")
     def test_get_metas(self, mock_fetch_meta):
         mock_fetch_meta.return_value = []
 
-        parser = MetaCsvParser(csv_path="toto.csv")
+        parser = MetaCsvParser(csv_path=Path("toto.csv"))
         parser.get_metas()
         r = parser.get_metas()
 
         assert mock_fetch_meta.call_count == 1, "Cache not used"
         assert r == []
 
-    @patch("opv_import.makelot.metacsvparser.MetaCsvParser.get_metas")
+    @patch("opv_import.helpers.meta_csv_parser.MetaCsvParser.get_metas")
     def test_get_meta(self, mock_get_metas):
         mock_get_metas.return_value = [
             RederbroMeta(

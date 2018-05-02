@@ -42,19 +42,19 @@ Options:
     --debug                     Set logs to debug.
 """
 
-from . import managedb
-from .treat import treat, treat_new
 from .importSD import Main
-from .makeLots import makeLots
 from .utils import Config, convert_args
-from .const import Const
 
 from path import Path
 from docopt import docopt
 
 from opv_directorymanagerclient import DirectoryManagerClient, Protocol
 
-from opv_import.makelot import LotMaker, Lot
+from opv_import.model import Lot
+from opv_import.services import LotMaker, RessourceManager
+from opv_import.config import Const
+
+from opv_api_client import RestClient
 
 import logging
 
@@ -112,10 +112,6 @@ def main():
     # Update with args
     conf.update(f_args)
 
-    managedb.make_client(conf['api-uri'])
-
-    campaign = managedb.make_campaign(id_malette, conf['campaign'], conf['id-rederbro'], conf.get('description'))
-
     # We need to improve this
     # Case 1 : we pass the Arguments
     # Case 2 : Go get the file on rederbro
@@ -150,11 +146,14 @@ def main():
         dm_client_args["api_base"] = conf['dir-manager-uri']
         dir_manager_client = DirectoryManagerClient(**dm_client_args)
 
+        ress_manager = RessourceManager(opv_api_client=RestClient(conf['api-uri']), opv_dm_client=dir_manager_client, id_malette=id_malette, use_hardlink=conf['dir-manager-file'])
+        campaign = ress_manager.make_campaign(name=conf['campaign'], id_rederbro=conf['id-rederbro'], description=conf.get('description'))
+
         # inserting ImageSets in the database and dm
         logger.info("Listing images sets from partitions and inserting them into OPV-API OPV-DM")
         for l in lots:
             logger.info("Treating log : %r ", l)
-            treat_new(id_malette, campaign, l, dir_manager_client, hardlinking=conf['dir-manager-file'])
+            ress_manager.make_lot(lot=l, campaign=campaign)
 
         return
 
@@ -165,29 +164,6 @@ def main():
         Main().init(conf.get('campaign'), conf).start()
         logger.info("... Done ! Data recover.")
         return
-
-    if conf.get('treat'):
-        logger.info("=================================================")
-        logger.info("================ Treating data  =================")
-
-        dm_client_args = {}
-        if '--dir-manager-tmp' in args and args['--dir-manager-tmp'] is not None and Path(args['--dir-manager-tmp']).isdir():
-            dm_client_args["workspace_directory"] = args['--dir-manager-tmp']
-
-        dm_client_args["default_protocol"] = Protocol.FILE if conf['dir-manager-file'] else Protocol.FTP
-        dm_client_args["api_base"] = conf['dir-manager-uri']
-        dir_manager_client = DirectoryManagerClient(**dm_client_args)
-        logger.info(srcDir)
-        refFirst = conf.get("ref") == 'first'
-        logger.info("FirstLotRef = " + str(refFirst))
-        for l in makeLots(srcDir, csvFile, firstLotRef=refFirst):
-            logger.debug("-- main --")
-            logger.debug(l)
-            treat(id_malette, campaign, l, dir_manager_client, hardlinking=conf['dir-manager-file'])
-            # lot object can't be send through network
-            if conf.get('export'):  # send to task queue
-                pass
-
 
 if __name__ == "__main__":
     main()

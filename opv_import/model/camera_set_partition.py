@@ -14,7 +14,21 @@
 
 # Contributors: Benjamin BERNARD <benjamin.bernard@openpathview.fr>
 # Email: team@openpathview.fr
+# Description: Camera Set Partition, represent a partition of ImagesSets.
 
-from opv_import import model
-from opv_import import helpers
-from opv_import import services
+from typing import NamedTuple, List
+from opv_import.model import ImageSet
+
+CameraSetPartition = NamedTuple(
+    'CameraSetPartition',
+    [
+        ('ref_set', ImageSet),
+        ('images_sets', List[ImageSet]),
+        ('start_indexes', List[int]),
+        ('fetcher_next_indexes', List[int]),
+        ('break_reason', str),
+        ('number_of_incomplete_sets', int),
+        ('number_of_complete_sets', int),
+        ('max_consecutive_incomplete_sets', int)
+    ]
+)

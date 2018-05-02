@@ -16,9 +16,8 @@
 # Email: team@openpathview.fr
 # Description: Represent a camera image file.
 
-import opv_import
 from path import Path
-from opv_import import pictures_utils
+from opv_import.helpers import pictures_utils
 
 class CameraImage:
     def __init__(self, path: Path):

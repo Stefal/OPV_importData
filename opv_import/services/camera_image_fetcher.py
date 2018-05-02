@@ -21,8 +21,8 @@
 import logging
 from path import Path
 from typing import List
-from opv_import.makelot import CameraImage
-from opv_import import OpvImportError
+from opv_import.model import CameraImage
+from opv_import.model import OpvImportError
 
 DCF_FILE_ALPHADIGIT_LEN = 4  # according to DCF specification DCF files have 4 alphadigit at the begining
 DCF_FOLDERS_DIGIT_LEN = 3    # according to DCF specification DCF directories (DCMI subdirectories) have 3 digit at the begining
@@ -93,7 +93,8 @@ class CameraImageFetcher:
             pic_path = files[0]
 
         self._f_prefix = pic_path.namebase[0:DCF_FILE_ALPHADIGIT_LEN]  # the prefix of jpg files, for instance "3D_L" for "3D_L0000.JPG"
-        self._f_digit_len = len(pic_path.namebase) - DCF_FILE_ALPHADIGIT_LEN  # the len of the index part in the name, for instance 4 for "3D_L0000.JPG"
+        self._f_digit_len = len(pic_path.namebase) - DCF_FILE_ALPHADIGIT_LEN
+        # the len of the index part in the name, for instance 4 for "3D_L0000.JPG"
         self._f_ext = pic_path.ext
 
     def _make_dcf_pic_filename(self, index: int):

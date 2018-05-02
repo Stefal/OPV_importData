@@ -14,13 +14,14 @@
 
 # Contributors: Benjamin BERNARD <benjamin.bernard@openpathview.fr>
 # Email: team@openpathview.fr
-# Description: Unit test for utils.
+# Description: Represent an orientation angle.
 
-import opv_import.makelot.utils as ut
+from typing import NamedTuple
 
-def test_bit_len():
-    assert ut.bit_len(0) == 0, "Wrong bit length"
-    assert ut.bit_len(1) == 1, "Wrong bit length"
-    assert ut.bit_len(2) == 2, "Wrong bit length"
-    assert ut.bit_len(3) == 2, "Wrong bit length"
-    assert ut.bit_len(4) == 3, "Wrong bit length"
+OrientationAngle = NamedTuple(
+    "OrientationAngle",
+    [
+        ("degree", float),
+        ("minutes", float)
+    ]
+)

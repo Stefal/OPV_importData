@@ -17,10 +17,10 @@
 # Description: Parse rederbro CSV into a list of RederbroMeta
 
 import csv
-import time
+import datetime
 from path import Path
 from typing import Dict, List
-from opv_import.makelot import RederbroMeta, OrientationAngle, GeoPoint
+from opv_import.model import RederbroMeta, OrientationAngle, GeoPoint
 
 class MetaCsvParser():
 
@@ -63,12 +63,13 @@ class MetaCsvParser():
         """
         Map CSV date into a timestamp.
 
-        :param csv_date: CSV date formated like "Sat Oct 28 08:11:03 2017".
+        :param csv_date: CSV date formated like "Sat Oct 28 08:11:03 2017". We will assume that dates are UTC.
         :type csv_date: str
         :return: Corresponding timestamp.
         :rtype: int
         """
-        return int(time.mktime(time.strptime(csv_date)) - 2 * 3600)  # ugly fix, we don't have dst info didn't found better
+        # forcing dates to be UTC, as rederbro doesn't gives a format
+        return int(datetime.datetime.strptime(csv_date+" +0000", '%a %b %d %H:%M:%S %Y %z').timestamp())
 
     def fetch_metas(self) -> List[RederbroMeta]:
         """

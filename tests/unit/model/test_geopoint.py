@@ -16,7 +16,8 @@
 # Email: team@openpathview.fr
 # Description: Unit test GeoPoint representation.
 
-from opv_import.makelot.geopoint import GeoPoint
+from opv_import.model import GeoPoint
+
 
 class TestGeoPoint(object):
 

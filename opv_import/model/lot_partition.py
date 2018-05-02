@@ -12,12 +12,18 @@
 # You should have received a copy of the GNU General Public License along
 # with this program. If not, see <http://www.gnu.org/licenses/>.
 
-from opv_import.makelot.cameraImage import CameraImage
-from opv_import.makelot.geopoint import GeoPoint
-from opv_import.makelot.imageSet import ImageSet
-from opv_import.makelot.rederbrometa import RederbroMeta, OrientationAngle
-from opv_import.makelot.metacsvparser import MetaCsvParser
-from opv_import.makelot.lot import Lot
-from opv_import.makelot.cameraImageFetcher import CameraImageFetcher
-from opv_import.makelot.cam_indexes_walker import indexes_walk
-from opv_import.makelot.lotMaker import LotMaker, CameraBackInTimeError
+# Contributors: Benjamin BERNARD <benjamin.bernard@openpathview.fr>
+# Email: team@openpathview.fr
+# Description: Represent a lot partition, a set a lot with start and end indexes.
+
+from typing import NamedTuple, List
+from opv_import.model import Lot
+
+LotPartition = NamedTuple('LotPartition', [
+    ('ref_lot', Lot),
+    ('lots', List[Lot]),
+    ('start_imgset_index', int),
+    ('start_meta_index', int),
+    ('break_reason', str),
+    ('number_of_good_associations', int)
+])

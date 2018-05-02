@@ -16,7 +16,7 @@
 # Email: team@openpathview.fr
 # Description: Lot represent img_set + meta.
 
-from opv_import.makelot import RederbroMeta, ImageSet
+from opv_import.model import RederbroMeta, ImageSet
 
 class Lot():
 

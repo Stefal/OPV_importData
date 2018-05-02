@@ -19,11 +19,13 @@
 import pytest
 import opv_import
 from unittest.mock import patch, MagicMock, call, DEFAULT
-from opv_import.makelot import CameraImageFetcher, CameraImage
+from opv_import.services import CameraImageFetcher
+from opv_import.model import CameraImage
 
 MOCKED_DIRS = ["/dir", "/dir/subdir"]
 
-Path = opv_import.makelot.cameraImageFetcher.Path  # Prevent namespace errors
+Path = opv_import.services.camera_image_fetcher.Path  # Prevent namespace errors
+
 
 class TestCameraImageFetcher(object):
 
@@ -93,17 +95,17 @@ class TestCameraImageFetcher(object):
         print("Stopped fake env")
         self.fake_env_patcher.stop()
 
-    @patch("opv_import.makelot.CameraImageFetcher._extract_file_names_param")
+    @patch("opv_import.services.CameraImageFetcher._extract_file_names_param")
     def test__init__ok(self, mock_extract_file_names_param):
         fetcher = CameraImageFetcher(dcim_folder=Path("/tmp/"))
 
         assert fetcher.dcim_folder == "/tmp/", "DCIM folder not correcly set"
-        assert fetcher._img_start_index == opv_import.makelot.cameraImageFetcher.GORPRO_IMG_START_INDEX, "Default start index is wrong"
+        assert fetcher._img_start_index == opv_import.services.camera_image_fetcher.GORPRO_IMG_START_INDEX, "Default start index is wrong"
         assert mock_extract_file_names_param.called, "File format (prefix, extension ..) wasn't called in constructor"
 
-    @patch("opv_import.makelot.CameraImageFetcher._extract_file_names_param", side_effect=opv_import.makelot.cameraImageFetcher.MissingDcfFolderError)
+    @patch("opv_import.services.CameraImageFetcher._extract_file_names_param", side_effect=opv_import.services.camera_image_fetcher.MissingDcfFolderError)
     def test__init__fail(self, mock_extract_file_names_param):
-        with pytest.raises(opv_import.makelot.cameraImageFetcher.MissingDcfFolderError) as e:
+        with pytest.raises(opv_import.services.camera_image_fetcher.MissingDcfFolderError) as e:
             fetcher = CameraImageFetcher(dcim_folder=Path("/tmp/"))
 
     def test__order_dcf_dir_ok(self):
@@ -142,8 +144,8 @@ class TestCameraImageFetcher(object):
 
         assert name == "3D_L0010.JPG", "File names formatting is wrong"
 
-    @patch("opv_import.makelot.CameraImageFetcher._order_dcf_files")
-    @patch("opv_import.makelot.CameraImageFetcher._make_dcf_pic_filename")
+    @patch("opv_import.services.CameraImageFetcher._order_dcf_files")
+    @patch("opv_import.services.CameraImageFetcher._make_dcf_pic_filename")
     @patch("path.Path.exists", autospec=True)
     def test___fetch_pic_files_from_dcf_dir(self, mock_path_exists, mock_name, mock_order_file):
         dcf_dir = Path("DCIM/101S3D_L/")
@@ -184,7 +186,7 @@ class TestCameraImageFetcher(object):
         assert len(images) == 4, "Should find 4 images"
         assert images == expected_camimg, "Wrong result in file order"
 
-    @patch("opv_import.makelot.CameraImageFetcher._make_dcf_pic_filename")
+    @patch("opv_import.services.CameraImageFetcher._make_dcf_pic_filename")
     @patch("path.Path.exists", autospec=True)
     def test__check_serie_continue_in_folder_ok(self, mock_path_exists, mock_name):
         files = [
@@ -203,7 +205,7 @@ class TestCameraImageFetcher(object):
         r = fetcher._check_serie_continue_in_folder(next_index=100, next_dcf_folder_path=Path("DCIM/101S3D_L/"))
         assert r, "Serie should continue"
 
-    @patch("opv_import.makelot.CameraImageFetcher._make_dcf_pic_filename")
+    @patch("opv_import.services.CameraImageFetcher._make_dcf_pic_filename")
     @patch("path.Path.exists", autospec=True)
     def test__check_serie_continue_in_folder_fail(self, mock_path_exists, mock_name):
         files = [
@@ -223,9 +225,9 @@ class TestCameraImageFetcher(object):
         r = fetcher._check_serie_continue_in_folder(next_index=100, next_dcf_folder_path=Path("DCIM/101S3D_L/"))
         assert not r, "Serie should not continue (conflicting case)"
 
-    @patch("opv_import.makelot.CameraImageFetcher._order_dcf_dir")
-    @patch("opv_import.makelot.CameraImageFetcher._check_serie_continue_in_folder")
-    @patch("opv_import.makelot.CameraImageFetcher._fetch_pic_files_from_dcf_dir")
+    @patch("opv_import.services.CameraImageFetcher._order_dcf_dir")
+    @patch("opv_import.services.CameraImageFetcher._check_serie_continue_in_folder")
+    @patch("opv_import.services.CameraImageFetcher._fetch_pic_files_from_dcf_dir")
     def test_fetch_images(self, mock_fetch_dir, mock_serie_check, mock_ordered_dir):
         dirs = [
             Path("DCIM/100S3D_L/"),
@@ -272,7 +274,7 @@ class TestCameraImageFetcher(object):
         assert mock_fetch_dir.call_args_list == fetch_dcf_calls, "DCF fetch not called correctly"
         assert res_img_cam == expected_img_cam, "Fetcher isn't fetch images in correct order"
 
-    @patch("opv_import.makelot.CameraImageFetcher.fetch_images")
+    @patch("opv_import.services.CameraImageFetcher.fetch_images")
     def test_get_images(self, mock_fetch_images):
         mock_fetch_images.return_value = [CameraImage(path=Path("DCIM/101S3D_L/3D_L0003.JPG"))]
 

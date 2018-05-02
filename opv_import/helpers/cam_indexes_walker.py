@@ -31,7 +31,7 @@
 #                    [3, 1, 0]
 
 from typing import List, Iterator
-from opv_import.makelot.utils import bit_len
+from opv_import.helpers import bit_len
 
 def get_bit_pos_in_global_index(apn_no: int, cam_bit_pos: int, nb_cams: int) -> int:
     """

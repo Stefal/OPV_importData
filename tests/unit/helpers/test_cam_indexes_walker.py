@@ -17,7 +17,7 @@
 # Description: Unit test for walk util functions.
 
 import pytest
-import opv_import.makelot.cam_indexes_walker as iwalker
+import opv_import.helpers.cam_indexes_walker as iwalker
 
 def test_get_bit_pos_in_global_index():
     assert iwalker.get_bit_pos_in_global_index(apn_no=0, cam_bit_pos=0, nb_cams=3) == 0, "Wrong bit position"
