@@ -20,7 +20,7 @@ import pytest
 from opv_import.services import RessourceManager
 from opv_import.model import RederbroMeta, OrientationAngle, GeoPoint, Lot, ImageSet, CameraImage
 from opv_api_client import ressources
-from unittest.mock import patch, call, DEFAULT, MagicMock
+from unittest.mock import patch, call, MagicMock
 from path import Path
 
 from typing import List

@@ -4,7 +4,6 @@
 import os
 import glob
 import json
-import shutil
 import pyudev
 import logging
 import threading
@@ -23,7 +22,7 @@ class APN_copy(threading.Thread):
         self.devname = devname
         self.pictDir = pictDir
         self.src = ''
-        self.start()
+        self.start()   # bouuuuuuuuuuuuh
 
     # Print iterations progress
     def printProgressBar(self, iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
