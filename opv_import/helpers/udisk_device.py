@@ -14,22 +14,17 @@
 
 # Contributors: Benjamin BERNARD <benjamin.bernard@openpathview.fr>
 # Email: team@openpathview.fr
-# Description: Abstract helper to manage copies from an external device (SD cards, hardrives ...).
+# Description: Abstract helper to manage device via udiskctl.
 
 import re
 import logging
 import subprocess
-import threading
 from path import Path
-
-from typing import List
-
-from abc import abstractmethod
 
 UDISK_MOUNTED_PATH_REGEX = r"(\/media.+)\.\n"
 
 
-class DeviceCopier(threading.Thread):
+class UdiskDevice:
 
     def __init__(self, device_name: str):
         """
@@ -53,7 +48,7 @@ class DeviceCopier(threading.Thread):
             return Path(m.groups()[0])
         return None
 
-    def _mount(self) -> Path:
+    def mount(self) -> Path:
         """
         Will mount the device.
         :raises MissingUdisckError: If udisksctl isn't found
@@ -79,33 +74,57 @@ class DeviceCopier(threading.Thread):
             ))
         except FileNotFoundError:
             self.logger.error("udisks not installed on system")
-            raise MissingUdisckError("udisks not installed on system")
+            raise MissingUdiskError("udisks not installed on system")
+
+    def unmount(self):
+        """ Unmount the device."""
+        self.logger.debug("Unmounting : %s", self._dev_name)
+        try:
+            p = subprocess.Popen(['udisksctl', 'unmount', '-b', self._dev_name], stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+            p.communicate()
+
+            self.logger.debug("Mounted at : %s", self._mount_path)
+        except subprocess.CalledProcessError as ex:
+            self.logger.error("{} not unmounted".format(self._dev_name))
+            raise UnMountError(
+                "Mount of {devname} (cmd:{r.cmd}) returned exit code {r.returncode} with stderr {r.stderr}".format(
+                    devname=self._dev_name,
+                    r=ex
+                ))
+        except FileNotFoundError:
+            self.logger.error("udisks not installed on system")
+            raise MissingUdiskError("udisks not installed on system")
+
+    def _find_mount_path(self) -> Path:
+        """
+        Find the mount Path if it exists. Check mount point in /proc/mounts
+        :return: The mount Path. Or None if not mounted.
+        """
+        with open("/proc/mounts", "r") as mounts:
+            print(len(mounts))
+            for line in mounts:
+                if line.startswith(self._dev_name):
+                    return Path(line.split(' ')[1])
+
+        return None
+
+    def is_mounted(self) -> bool:
+        """ Tell if the device is mounted, refesh the mount_path property"""
+        # When using diskctl, mount folder is created at mount and deleted after.
+        # So we just need to check if the mount folder is existing.
+        # We also found the mount Path if not already done.
+        if self._mount_path is None:  # try to find mount Path
+            self._mount_path = self._find_mount_path()
+
+        return self._mount_path is not None and self._mount_path.exists()
 
     @property
     def mount_path(self) -> Path:
         """ Return the mounted path. Will mount it if it's not already done."""
-        if self._mount_path is None:
+        if not self.is_mounted():
             self._mount()
         return self._mount_path
-
-    @abstractmethod
-    def _list_src_paths_to_copy(self) -> List[Path]:
-        """ Abstract, should return list of path to copy. You should use mount_path to get the device mounted path."""
-        raise NotImplemented
-
-    @abstractmethod
-    def _compute_destination(self, source: Path) -> Path:
-        """ Compute destination Path from source Path, you need to implement it."""
-        raise NotImplemented
-
-    def run_copy(self):
-        """ Make the actual copy"""
-        # TODO
-        pass
-
-    def run(self):
-        """ Simply run the copy."""
-        self.run_copy()
 
 
 class MountError(Exception):
@@ -113,6 +132,11 @@ class MountError(Exception):
     pass
 
 
-class MissingUdisckError(Exception):
+class MissingUdiskError(Exception):
     """ When mounting fail because of udisck missing (udisksctl command not found in PATH) """
+    pass
+
+
+class UnMountError(Exception):
+    """ When unmount goes badly, see message for more details on the error"""
     pass
