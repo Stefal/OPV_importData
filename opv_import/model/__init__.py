@@ -7,3 +7,4 @@ from opv_import.model.lot import Lot
 from opv_import.model.opv_import_error import OpvImportError
 from opv_import.model.camera_set_partition import CameraSetPartition
 from opv_import.model.lot_partition import LotPartition
+from opv_import.model.apn_device import ApnDevice

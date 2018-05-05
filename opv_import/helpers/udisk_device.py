@@ -126,6 +126,11 @@ class UdiskDevice:
             self._mount()
         return self._mount_path
 
+    @property
+    def dev_name(self) -> str:
+        """ Return device name. """
+        return self._dev_name
+
 
 class MountError(Exception):
     """ When mount goes badly, see message for more details on the error"""
