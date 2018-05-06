@@ -4,3 +4,4 @@ from opv_import.helpers.cam_indexes_walker import indexes_walk
 from opv_import.helpers.meta_csv_parser import MetaCsvParser
 from opv_import.helpers.udisk_device import UdiskDevice
 from opv_import.helpers.rsync_wrapper import RsyncWrapper
+from opv_import.helpers.thread_pool import ThreadPool
