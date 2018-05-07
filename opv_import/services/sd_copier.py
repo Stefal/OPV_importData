@@ -23,6 +23,7 @@ from path import Path
 from opv_import.helpers import RsyncWrapper
 from opv_import.services import AbstractApnDeviceTasker
 from opv_import import model
+from opv_import.model.apn_device import ApnDeviceNumberNotFoundError
 
 SD_UDEV_OBSERVER_NAME = "OPV SD card import"
 COPY_NUMBER_OF_WORKERS = 3
@@ -61,6 +62,13 @@ class SdCopier(AbstractApnDeviceTasker):
         :return: A task, callable with no args and no return.
         """
         def task():    # close with device
+            # check it's a configured device
+            try:
+                device.apn_number
+            except ApnDeviceNumberNotFoundError:
+                self.logger.error("The device %s doesn't have an APN number, migth not be configured aborting copy", device.dev_name)
+                return
+
             def on_progress(progress_rate):
                 self.logger.debug("Rsync progress for APN %r, rate: %f", device, progress_rate)
                 self._progress[device.apn_number] = progress_rate

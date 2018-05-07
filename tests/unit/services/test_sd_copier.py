@@ -17,12 +17,13 @@
 # Description: Test - Watch for storage devices to be inserted and copy their DCMI folder to a destination folder.
 
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch, call, PropertyMock
 
 from opv_import.services import SdCopier, AbstractApnDeviceTasker
 from opv_import.services.sd_copier import COPY_NUMBER_OF_WORKERS
 from opv_import.helpers import RsyncWrapper
 from opv_import.model import ApnDevice
+from opv_import.model.apn_device import ApnDeviceNumberNotFoundError
 from path import Path
 
 class TestSdCopier(object):
@@ -60,6 +61,31 @@ class TestSdCopier(object):
         assert mock_rsync.on_progress.call_count == 1
         assert mock_rsync.on_terminate.call_count == 1
         assert mock_rsync.run.call_count == 1
+
+    @patch("opv_import.services.sd_copier.RsyncWrapper")
+    @patch("opv_import.services.AbstractApnDeviceTasker.__init__")
+    def test_generate_task_fail(self, mock_parent_init, mock_rsync_construct):
+        def apn_to_dest(apn_number):
+            return Path("path/APN{n}".format(n=apn_number))
+
+        # apn_device mock
+        apn_device = MagicMock(ApnDevice)
+        apn_device.apn_number = MagicMock()
+        type(apn_device).apn_number = PropertyMock(side_effect=ApnDeviceNumberNotFoundError())
+        apn_device.mount_path = "/mnt/SD"
+
+        mock_rsync = MagicMock(RsyncWrapper)
+        mock_rsync_construct.return_value = mock_rsync
+
+        sd_cp = SdCopier(number_of_devices=2, apn_id_to_dest=apn_to_dest)
+        task = sd_cp._generate_task(device=apn_device)
+
+        task()
+
+        assert mock_rsync_construct.call_count == 0
+        assert mock_rsync.on_progress.call_count == 0
+        assert mock_rsync.on_terminate.call_count == 0
+        assert mock_rsync.run.call_count == 0
 
     @patch("opv_import.services.AbstractApnDeviceTasker.__init__")
     def test_is_device_transfert_terminated(self, m_parent):
