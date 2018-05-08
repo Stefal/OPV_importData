@@ -51,11 +51,11 @@ class ApnDevice(UdiskDevice):
         self.logger.debug("Loading configuration from APN storage device %s", super().dev_name)
 
         path_conf_file = super().mount_path / APN_CONF_RELATIVE_PATH
-        self.logger.debug("Configuration file need to be here : %s", path_conf_file)
         if path_conf_file.exists():
             with open(path_conf_file, "r") as conf_file:
                 self._apn_conf = json.load(conf_file)
         else:
+            self.logger.debug("Configuration file need to be here : %s", path_conf_file)
             self._apn_conf = {}
             self._apn_conf.update(APN_DEFAULT_CONFIG)
 

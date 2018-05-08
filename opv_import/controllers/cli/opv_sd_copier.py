@@ -31,12 +31,14 @@ Options:
 
 import logging
 import docopt
+import signal
 from opv_import.helpers.logging import setup_logging
 from opv_import.services import SdCopier
 
 from path import Path
 
 from typing import Dict
+
 
 def main():
     # Loggers to handle + debug option
@@ -61,11 +63,11 @@ def main():
         :param terminated: For each apn_num (key), tells it the copy is terminated (True) or not (False).
         """
         msg = "Devices copy progression : "
-        ids = progressions.keys()
+        ids = list(progressions.keys())
         ids.sort()
-        progressions_msg = ()
+        progressions_msg = []
         for apn_num in progressions.keys():
-            progressions_msg.append("APN[apn_num}: {p:.2f}%".format(apn_num=apn_num, p=progressions[apn_num]))
+            progressions_msg.append("APN{apn_num}: {p:.2f}%".format(apn_num=apn_num, p=progressions[apn_num]*100))
 
         msg += " | ".join(progressions_msg)
 
@@ -74,6 +76,9 @@ def main():
     # Starting copier service
     copier = SdCopier(number_of_devices=number_of_devices, dest_path=output_directory)
     copier.on_progression_change(event=display_device_progression)  # listen on device progression changes
+
+    # Interruptions
+    signal.signal(signal.SIGINT, lambda signnum, frame: copier.stop(force=True))
 
     logger.info("Starting copy for %i devices to %s", number_of_devices, output_directory)
     copier.start()

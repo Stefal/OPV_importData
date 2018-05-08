@@ -65,6 +65,12 @@ class AbstractApnDeviceTasker:
 
         self._seen_devices_lock.acquire()
         self._seen_devices.append(device)
+
+        # telling we have seen all devices
+        if len(self._seen_devices) == self._number_of_devices:
+            self._see_all_event.set()
+            self._see_all_event.clear()
+
         self._seen_devices_lock.release()
 
     @abstractmethod
@@ -88,11 +94,6 @@ class AbstractApnDeviceTasker:
             if d.apn_number == device.apn_number:
                 is_in = True
                 break
-
-        # telling we have seen all devices
-        if len(self._seen_devices) == self._number_of_devices:
-            self._see_all_event.set()
-            self._see_all_event.clear()
 
         self._seen_devices_lock.release()
 

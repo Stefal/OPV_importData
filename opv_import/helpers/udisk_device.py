@@ -42,6 +42,7 @@ class UdiskDevice:
         :param output: udisksctl ouput.
         :return: The mounted path.
         """
+        self.logger.debug("_udisks_extract_mount_path : %s", udisk_output)
         # ouput is like : Mounted /dev/sdc1 at /media/benjamin/B291-4FA9.
         m = re.search(UDISK_MOUNTED_PATH_REGEX, udisk_output, flags=re.MULTILINE)
         if m is not None:
@@ -62,7 +63,8 @@ class UdiskDevice:
             self._mount_path = self._udisks_extract_mount_path(udisk_output=out.decode("utf8"))
 
             if self._mount_path is None:
-                raise MountError("Mount path not found in udisksctl ouput")
+                self.logger.error("_find_mount_path: %s", self._find_mount_path())
+                raise MountError("Mount path not found in udisksctl ouput for {}".format(self.dev_name))
 
             self.logger.debug("Mounted at : %s", self._mount_path)
             return self._mount_path

@@ -84,6 +84,8 @@ class SdCopier(AbstractApnDeviceTasker):
                 self._progress[device.apn_number] = 1
                 self._terminated[device.apn_number] = True
                 self._fire_on_progression_change()
+                device.unmount()
+                self.logger.debug("Device %r unmounted", device)
 
             source_path = device.mount_path / SD_DCIM_FOLDER_PATH  # no trailling slash for rsync to copy folder + content
             dest_path = self.dest_path(apn_number=device.apn_number)
@@ -98,7 +100,6 @@ class SdCopier(AbstractApnDeviceTasker):
         """
         Fire progression change event.
         """
-        print(self._on_progression_change)
         if self._on_progression_change is not None:
             self._on_progression_change(self.devices_progressions, self.devices_terminated)
 
