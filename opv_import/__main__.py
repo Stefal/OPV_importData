@@ -8,25 +8,12 @@ Usage:
 Arguments:
     campaign                   The name of the campaign to import
 Options:
-    -h --help                  Show this screen
-    --csv-path=<str>           The path of CSV file for synchro
-    --no-clean-sd              Clean SD after copying.
-                                /!\\
-                                    This need sudo rights and you may loose
-                                    the content of the SD card if something fail !
-                                /!\\
+    -h --help                   Show this screen
+    --csv-path=<str>            The path of CSV file for rederbro meta data.
     --config-file=<str>         The path to the config file. Default configuration is embeded in the script.
     --clean-sd                  Do NOT clean SD after copying.
-    --no-treat                  Don't treat files
-    --treat                     Treat files
-    --export                    Send files to the task queue
-    --no-export                 Don't send files to the task queue
-    --import                    Import files
-    --no-import                 Don't import files
-    --ref=<str>                 'first' the first images (oldest) constitute a reference lot,
-                                'last' the last images (newest) constitue a reference lot.
+    --import                    Import files from external Apn Devices (such as SD cards with correct configuration file in it)
     --data-dir=<str>            Where should be placed file imported from SD
-    --lots-output-dir=<str>     Where created lots may be placed
     --id-rederbro=<str>         Id of the rederbro use fot the campaign
     --description=<str>         Description of the campaign
     --dir-manager-uri=<str>     URI of the DirectoryManager [default: http://localhost:5001]
@@ -37,7 +24,6 @@ Options:
     --dir-manager-tmp=<str>     Tells the DirectoryManagerClient where is it's tempory directory.
     --makelot-new-version       Make camera lot using the new algorithm, actually this algorithm is under developpment and doesn't handle CSV metadata
                                 This new version doesn't handle import from SD card so you need to set the datadir.
-
     --api-uri=<str>             URI of the DirectoryManager [default: http://localhost:5000]
     --debug                     Set logs to debug.
 """

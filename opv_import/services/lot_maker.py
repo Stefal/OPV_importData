@@ -23,13 +23,14 @@ from opv_import.services import CameraImageFetcher
 from typing import List, Iterator, Dict, Tuple, NamedTuple
 from opv_import.model import ImageSet, RederbroMeta, Lot, CameraImage, OpvImportError, CameraSetPartition, LotPartition
 from opv_import.helpers import MetaCsvParser
+from opv_import.config import APN_NUM_TO_APN_OUTPUT_DIR
 
 import datetime
 def dt(ts):
     return datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 
 TIME_MARGING = 3  # max time difference accepted in picture exif metadata
-CAM_DCIM_PATH = "APN{}/DCIM"  # TODO this format whould be elsewhere has it's also use in SdCopier caller
+CAM_DCIM_PATH = APN_NUM_TO_APN_OUTPUT_DIR+"/DCIM"
 REF_SEARCH_NB_LOT_GENERATED = 30  # default number lot generated for camera set reference search
 REF_SEARCH_MAX_INCOMPLET_CONSECUTIVE_SET = 7  # Maximum number of accepted consecutive incomplete sets during reference search
 REF_SEARCH_MAX_INCOMPLET_SETS = 10  # Maximum total number of incomplete sets during reference search

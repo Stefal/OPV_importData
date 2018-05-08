@@ -25,6 +25,8 @@ from opv_import.model import ApnDevice
 from opv_import.services import AbstractApnDeviceTasker
 from opv_import.services.abstract_apn_device_tasker import SD_UDEV_OBSERVER_NAME
 
+import threading
+
 class TestAbstractApnDeviceTasker(object):
 
     @patch("threading.Lock")
@@ -74,8 +76,34 @@ class TestAbstractApnDeviceTasker(object):
         tasker._copy_thread_pool.add_task = MagicMock()
         tasker._add_device_to_treatment(device=apn_device)
 
-
         assert mock_add_seen.call_args_list == [call(device=apn_device)]
+        assert mock_generate_task.call_args_list == [call(device=apn_device)]
+        assert tasker._copy_thread_pool.add_task.call_args_list == [call(generated_task)]
+
+    @patch("threading.Lock")
+    @patch("opv_import.services.AbstractApnDeviceTasker._add_seen_device")
+    @patch("opv_import.services.AbstractApnDeviceTasker._generate_task")
+    def test__add_device_to_treatment_seen_disble(self, mock_generate_task, mock_add_seen, mock_lock_init):
+        # lock
+        mock_lock = MagicMock()
+        mock_lock.acquire = MagicMock()
+        mock_lock.release = MagicMock()
+        mock_lock_init.return_value = mock_lock
+
+        # apn_device mock
+        apn_device = MagicMock(ApnDevice)
+        apn_device.apn_number = 0
+
+        # mock generated task
+        generated_task = MagicMock()
+        mock_generate_task.return_value = generated_task
+
+        tasker = AbstractApnDeviceTasker(number_of_worker=2)  # number of devices unset
+        tasker._copy_thread_pool = MagicMock()
+        tasker._copy_thread_pool.add_task = MagicMock()
+        tasker._add_device_to_treatment(device=apn_device)
+
+        assert mock_add_seen.call_args_list == []
         assert mock_generate_task.call_args_list == [call(device=apn_device)]
         assert tasker._copy_thread_pool.add_task.call_args_list == [call(generated_task)]
 
@@ -140,3 +168,27 @@ class TestAbstractApnDeviceTasker(object):
         tasker.stop()
         assert observer_mock.start.call_count == 1
         assert mock_pool_instance.stop.call_count == 1
+
+    @patch("opv_import.services.abstract_apn_device_tasker.create_udev_block_observer")
+    @patch("opv_import.services.abstract_apn_device_tasker.ThreadPool")
+    @patch("threading.Event")
+    def test_wait(self, mock_event, mock_thread_pool, mock_observer_fact):
+        observer_mock = MagicMock()
+        observer_mock.start = MagicMock()
+        observer_mock.stop = MagicMock()
+        mock_observer_fact.return_value = observer_mock
+
+        mock_pool_instance = MagicMock()
+        mock_pool_instance.wait_all_task_treated = MagicMock()
+        mock_thread_pool.return_value = mock_pool_instance
+
+        mock_event_instance = MagicMock(threading.Event)
+        mock_event_instance.wait = MagicMock()
+        mock_event.return_value = mock_event_instance
+
+        tasker = AbstractApnDeviceTasker(number_of_devices=2, number_of_worker=2)
+        tasker.start()
+        tasker.wait()
+
+        assert mock_event_instance.wait.call_count == 1
+        assert mock_pool_instance.wait_all_task_treated.call_count == 1

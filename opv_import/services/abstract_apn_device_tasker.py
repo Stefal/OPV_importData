@@ -30,17 +30,18 @@ from opv_import import model
 import threading
 
 SD_UDEV_OBSERVER_NAME = "OPV SD card import"
+UNTRACK_SEEN_DEVICE = -1  # Allow same device to be seen multiple times, usefull for setting the devices conf
 
 
 class AbstractApnDeviceTasker:
 
-    def __init__(self, number_of_devices: int, number_of_worker: int):
+    def __init__(self, number_of_worker: int, number_of_devices: int=UNTRACK_SEEN_DEVICE):
         """
         Initiate an AbstractApnDeviceTasker class. Used to watch an apply a task on each devices.
-        :param number_of_devices: Number of devices to watch (used to know when we have finished.
         :param number_of_worker: Number of thread that can run simultaneously.
+        :param number_of_devices: Number of devices to watch (used to know when we have finished. Default -1, disable devices seen notions.
         """
-        self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
+        self.logger = logging.getLogger(AbstractApnDeviceTasker.__module__ + "." + AbstractApnDeviceTasker.__class__.__name__)
 
         self._number_of_devices = number_of_devices
         self._number_of_workers = number_of_worker
@@ -51,6 +52,9 @@ class AbstractApnDeviceTasker:
         # List of devices that where already seen by udev (are treated already or in pool for treatment)
         self._seen_devices = []  # list of model.ApnDevices
         self._seen_devices_lock = threading.Lock()
+
+        # Event to know when a device
+        self._see_all_event = threading.Event()
 
     def _add_seen_device(self, device: model.ApnDevice):
         """
@@ -84,6 +88,12 @@ class AbstractApnDeviceTasker:
             if d.apn_number == device.apn_number:
                 is_in = True
                 break
+
+        # telling we have seen all devices
+        if len(self._seen_devices) == self._number_of_devices:
+            self._see_all_event.set()
+            self._see_all_event.clear()
+
         self._seen_devices_lock.release()
 
         return is_in
@@ -94,8 +104,12 @@ class AbstractApnDeviceTasker:
         :param device:
         :return:
         """
-        self._add_seen_device(device=device)
+        # You need to add task to Queue first, because the seen event will wait on the queue
+        # and is triggered by the add_seen_device
         self._copy_thread_pool.add_task(self._generate_task(device=device))
+
+        if UNTRACK_SEEN_DEVICE != self._number_of_devices:
+            self._add_seen_device(device=device)
 
     def _on_udev_event(self, action: str, device: pyudev.Device):
         """
@@ -104,7 +118,7 @@ class AbstractApnDeviceTasker:
         :param device: The udev device.
         """
         if action == "add" and 'DEVNAME' in device.keys() and "partition" in device.attributes.available_attributes:
-            self.logger.info("Device %s added", device['DEVNAME'])
+            self.logger.debug("Device %s added", device['DEVNAME'])
             device_model = model.ApnDevice(device_name=device['DEVNAME'])
 
             if not self._is_seen_device(device=device_model):
@@ -124,7 +138,23 @@ class AbstractApnDeviceTasker:
         self._udev_observer = create_udev_block_observer(self._on_udev_event, observer_name=SD_UDEV_OBSERVER_NAME)
         self._udev_observer.start()
 
-    def stop(self):
-        """Stop watching for new devices and thread pool"""
-        self._udev_observer.stop()
-        self._copy_thread_pool.stop()
+    def wait(self):
+        """ Wait for all devices to be treated"""
+        self._see_all_event.wait()  # Wait until we have seen all devices
+        self._copy_thread_pool.wait_all_task_treated()   # Wait until all copy task are done
+
+    def stop(self, force: bool=False):
+        """
+        Stop watching for new devices and thread pool.
+        :param force: If True will try to unlock waiting also.
+        """
+        if force:
+            self._see_all_event.set()
+            self._see_all_event.clear()
+
+        try:
+            self._udev_observer.stop()
+        except ValueError:  # Observer pipe migth be already closed which though a I/O operation on closed file.
+            pass
+        finally:
+            self._copy_thread_pool.stop()

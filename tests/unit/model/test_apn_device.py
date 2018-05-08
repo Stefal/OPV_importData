@@ -19,7 +19,7 @@
 import pytest
 from opv_import.model import ApnDevice
 from opv_import.model.apn_device import APN_CONF_NUMBER_KEY, APN_CONF_RELATIVE_PATH, APN_DEFAULT_CONFIG
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock, call, PropertyMock
 from path import Path
 
 
@@ -29,7 +29,7 @@ class TestApnDevice(object):
     @patch("opv_import.helpers.UdiskDevice.dev_name")
     @patch("opv_import.helpers.UdiskDevice.__init__")
     @patch("json.load")
-    @patch("opv_import.helpers.UdiskDevice.mount_path")
+    @patch("opv_import.helpers.UdiskDevice.mount_path", new_callable=PropertyMock)
     @patch("builtins.open", create=True)
     def test__load_configuration(self, mock_open, mock_udisk_mount_path, mock_json, mock_udisk_init, mock_disk_dev_name, mock_path_exists):
         mnt_path = Path("/mnt/SD1")
@@ -65,7 +65,7 @@ class TestApnDevice(object):
     @patch("opv_import.helpers.UdiskDevice.dev_name")
     @patch("opv_import.helpers.UdiskDevice.__init__")
     @patch("json.load")
-    @patch("opv_import.helpers.UdiskDevice.mount_path")
+    @patch("opv_import.helpers.UdiskDevice.mount_path", new_callable=PropertyMock)
     @patch("builtins.open", create=True)
     def test__load_configuration_default(self, mock_open, mock_udisk_mount_path, mock_json, mock_udisk_init, mock_disk_dev_name,
                                  mock_path_exists):
@@ -115,7 +115,7 @@ class TestApnDevice(object):
 
         assert mock_load_conf.call_count == 0
 
-    @patch("opv_import.helpers.UdiskDevice.mount_path")
+    @patch("opv_import.helpers.UdiskDevice.mount_path", new_callable=PropertyMock)
     @patch("opv_import.model.ApnDevice._load_configuration")
     @patch("opv_import.helpers.UdiskDevice.dev_name")
     @patch("opv_import.helpers.UdiskDevice.__init__")

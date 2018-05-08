@@ -30,6 +30,8 @@ setup(
         'console_scripts': [
             'opv-import = opv_import.__main__:main',
             'opv-clean-sd = opv_import.cleanSD:main',
+            'opv-sd-copier = opv_import.controllers.cli.opv_sd_copier:main',
+            'opv-sd-configurer = opv_import.controllers.cli.opv_sd_configurer:main'
         ],
     }
 )

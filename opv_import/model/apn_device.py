@@ -50,7 +50,7 @@ class ApnDevice(UdiskDevice):
         """
         self.logger.debug("Loading configuration from APN storage device %s", super().dev_name)
 
-        path_conf_file = super().mount_path() / APN_CONF_RELATIVE_PATH
+        path_conf_file = super().mount_path / APN_CONF_RELATIVE_PATH
         self.logger.debug("Configuration file need to be here : %s", path_conf_file)
         if path_conf_file.exists():
             with open(path_conf_file, "r") as conf_file:
@@ -97,7 +97,7 @@ class ApnDevice(UdiskDevice):
         if self._apn_conf is None:
             self._load_configuration()
 
-        self.apn_number[APN_CONF_NUMBER_KEY] = number
+        self._apn_conf[APN_CONF_NUMBER_KEY] = number
         self.save_config()
 
     def save_config(self):
@@ -110,9 +110,16 @@ class ApnDevice(UdiskDevice):
         if self._apn_conf is None:
             self._load_configuration()
 
-        path_conf_file = super().mount_path() / APN_CONF_RELATIVE_PATH
+        path_conf_file = super().mount_path / APN_CONF_RELATIVE_PATH
         with open(path_conf_file, "w") as conf_file:
             json.dump(self._apn_conf, conf_file)
+
+    def __repr__(self) -> str:
+        """ Representation of a device"""
+        try:
+            return "ApnDevice[devname: \"{d.dev_name}\", apn_number: {d.apn_number}]".format(d=self)
+        except ApnDeviceNumberNotFoundError:
+            return "ApnDevice[devname: \"{d.dev_name}\", apn_number: NotFound]".format(d=self)
 
 
 

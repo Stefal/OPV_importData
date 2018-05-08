@@ -14,9 +14,7 @@
 
 # Contributors: Benjamin BERNARD <benjamin.bernard@openpathview.fr>
 # Email: team@openpathview.fr
+# Description: Describe output device import storage directory structure.
 
-from opv_import import model
-from opv_import import helpers
-from opv_import import services
-from opv_import import controllers
-from opv_import import config
+# Using in maklot to get input files and on the device import scripts
+APN_NUM_TO_APN_OUTPUT_DIR = "APN{}"

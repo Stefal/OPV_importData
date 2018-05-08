@@ -31,7 +31,7 @@ class UdiskDevice:
         Init a device copier from a device name.
         :param device_name: Name of the partition, should be something like /dev/sda1, /dev/sdb2 ...
         """
-        self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
+        self.logger = logging.getLogger(UdiskDevice.__module__ + "." + UdiskDevice.__class__.__name__)
 
         self._dev_name = device_name
         self._mount_path = None   # will be the mounted path
@@ -102,7 +102,6 @@ class UdiskDevice:
         :return: The mount Path. Or None if not mounted.
         """
         with open("/proc/mounts", "r") as mounts:
-            print(len(mounts))
             for line in mounts:
                 if line.startswith(self._dev_name):
                     return Path(line.split(' ')[1])
@@ -123,7 +122,7 @@ class UdiskDevice:
     def mount_path(self) -> Path:
         """ Return the mounted path. Will mount it if it's not already done."""
         if not self.is_mounted():
-            self._mount()
+            self.mount()
         return self._mount_path
 
     @property

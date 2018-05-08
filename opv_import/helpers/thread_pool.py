@@ -16,6 +16,9 @@
 # Email: team@openpathview.fr
 # Description: A simple thread pool with queue.
 
+# Good documentation about python and threads :
+# https://www.laurentluce.com/posts/python-threads-synchronization-locks-rlocks-semaphores-conditions-events-and-queues/
+
 import logging
 from queue import Queue
 import threading
@@ -72,6 +75,15 @@ class ThreadPool:
         for t in self.__threads:  # wait for all threads to join, before releasing
             t.join()
         self.logger.debug("Thread pool stopped")
+
+    def wait_all_task_treated(self):
+        """
+        Wait until all task are treated.
+        """
+        self.logger.debug("Waiting for all task to be done, queue size : %i", self.__task_queue.qsize())
+        if not self.__task_queue.empty():
+            self.__task_queue.join()
+        self.logger.debug("All task finished")
 
     def start(self):
         """
