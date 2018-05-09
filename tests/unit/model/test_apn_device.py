@@ -25,6 +25,9 @@ from path import Path
 
 class TestApnDevice(object):
 
+    def get_device(self):
+        return {'DEVNAME': "/dev/sdc1"}
+
     @patch("path.Path.exists")
     @patch("opv_import.helpers.UdiskDevice.dev_name")
     @patch("opv_import.helpers.UdiskDevice.__init__")
@@ -53,7 +56,7 @@ class TestApnDevice(object):
         # Json mock
         mock_json.return_value = {APN_CONF_NUMBER_KEY: 42}
 
-        device = ApnDevice(device_name="/dev/sda1")
+        device = ApnDevice(device=self.get_device())
         device._load_configuration()
 
         assert mock_path_exists.call_count == 1
@@ -90,7 +93,7 @@ class TestApnDevice(object):
         # Json mock
         mock_json.return_value = {APN_CONF_NUMBER_KEY: 42}
 
-        device = ApnDevice(device_name="/dev/sda1")
+        device = ApnDevice(device=self.get_device())
         device._load_configuration()
 
         assert mock_path_exists.call_count == 1
@@ -100,7 +103,7 @@ class TestApnDevice(object):
 
     @patch("opv_import.helpers.UdiskDevice.__init__")
     def test_ignore_unexisting_configuration(self, mock_disk_init):
-        device = ApnDevice(device_name="/dev/sda1")
+        device = ApnDevice(device=self.get_device())
         device.ignore_unexisting_configuration = True
 
         assert device.ignore_unexisting_configuration == True
@@ -108,7 +111,7 @@ class TestApnDevice(object):
     @patch("opv_import.helpers.UdiskDevice.__init__")
     @patch("opv_import.model.ApnDevice._load_configuration")
     def test_apn_number(self, mock_load_conf, mock_disk_init):
-        device = ApnDevice(device_name="/dev/sda1")
+        device = ApnDevice(device=self.get_device())
         device._apn_conf = APN_DEFAULT_CONFIG
         device._apn_conf[APN_CONF_NUMBER_KEY] = 42
         device.apn_number
@@ -136,7 +139,7 @@ class TestApnDevice(object):
         mnt_path = Path("/mnt/SD1")
         mock_udisk_mount_path.return_value = mnt_path
 
-        device = ApnDevice(device_name="/dev/sda1")
+        device = ApnDevice(device=self.get_device())
         device.save_config()
 
         assert mock_load_conf.call_count == 1

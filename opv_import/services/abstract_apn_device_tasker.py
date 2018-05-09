@@ -26,6 +26,7 @@ from opv_import.helpers.udev_observer import create_udev_block_observer
 from opv_import.helpers import ThreadPool
 
 from opv_import import model
+from opv_import.model.apn_device import ApnDeviceNumberNotFoundError
 
 import threading
 
@@ -101,7 +102,7 @@ class AbstractApnDeviceTasker:
 
     def _add_device_to_treatment(self, device: model.ApnDevice):   # abstract method
         """
-        Add a device to the treament chain (for copy).
+        Add a device to the treament chain.
         :param device:
         :return:
         """
@@ -112,6 +113,21 @@ class AbstractApnDeviceTasker:
         if UNTRACK_SEEN_DEVICE != self._number_of_devices:
             self._add_seen_device(device=device)
 
+    def _has_required_configuration(self, device: model.ApnDevice) -> bool:
+        """
+        Tells if a device has the needed configuration or not. Needed configuration is to have an apn_number.
+        :param device: Device to be checked.
+        :return: True if the device is well configured.
+        """
+        ok = False
+        try:
+            device.apn_number
+            ok = True
+        except ApnDeviceNumberNotFoundError:
+            pass
+
+        return ok
+
     def _on_udev_event(self, action: str, device: pyudev.Device):
         """
         When a device change, called by udev observer.
@@ -120,12 +136,18 @@ class AbstractApnDeviceTasker:
         """
         if action == "add" and 'DEVNAME' in device.keys() and "partition" in device.attributes.available_attributes:
             self.logger.debug("Device %s added", device['DEVNAME'])
-            device_model = model.ApnDevice(device_name=device['DEVNAME'])
+            device_model = model.ApnDevice(device=device)
 
-            if not self._is_seen_device(device=device_model):
-                self._add_device_to_treatment(device=device_model)
+            if UNTRACK_SEEN_DEVICE != self._number_of_devices:  # need to track seen devices
+                if self._has_required_configuration(device=device_model):
+                    if not self._is_seen_device(device=device_model):
+                        self._add_device_to_treatment(device=device_model)
+                    else:
+                        self.logger.debug("Device already seen")
+                else:
+                    self.logger.error("Device %r, doesn't have suffisant configuration to be tracked", device)
             else:
-                self.logger.debug("Device already seen")
+                self._add_device_to_treatment(device=device_model)
 
     def start(self):
         """

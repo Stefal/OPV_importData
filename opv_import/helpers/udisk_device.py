@@ -20,20 +20,21 @@ import re
 import logging
 import subprocess
 from path import Path
+import pyudev
 
 UDISK_MOUNTED_PATH_REGEX = r"(\/media.+)\.\n"
 
 
 class UdiskDevice:
 
-    def __init__(self, device_name: str):
+    def __init__(self, device: pyudev.Device):
         """
         Init a device copier from a device name.
         :param device_name: Name of the partition, should be something like /dev/sda1, /dev/sdb2 ...
         """
         self.logger = logging.getLogger(UdiskDevice.__module__ + "." + UdiskDevice.__class__.__name__)
 
-        self._dev_name = device_name
+        self._device = device
         self._mount_path = None   # will be the mounted path
 
     def _udisks_extract_mount_path(self, udisk_output: str) -> Path:
@@ -56,11 +57,14 @@ class UdiskDevice:
         :raises MountError: If the mount command failed.
         :return: Mount path
         """
-        self.logger.debug("Mounting : %s", self._dev_name)
+        self.logger.debug("Mounting : %s", self.dev_name)
         try:
-            p = subprocess.Popen(['udisksctl', 'mount', '-b', self._dev_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen(['udisksctl', 'mount', '-b', self.dev_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, _ = p.communicate()
             self._mount_path = self._udisks_extract_mount_path(udisk_output=out.decode("utf8"))
+
+            if self._mount_path is None:  # try if it's not already mounted
+                self._mount_path = self._find_mount_path()
 
             if self._mount_path is None:
                 self.logger.error("_find_mount_path: %s", self._find_mount_path())
@@ -69,9 +73,9 @@ class UdiskDevice:
             self.logger.debug("Mounted at : %s", self._mount_path)
             return self._mount_path
         except subprocess.CalledProcessError as ex:
-            self.logger.error("{} not mounted".format(self._dev_name))
+            self.logger.error("{} not mounted".format(self.dev_name))
             raise MountError("Mount of {devname} (cmd:{r.cmd}) returned exit code {r.returncode} with stderr {r.stderr}".format(
-                devname=self._dev_name,
+                devname=self.dev_name,
                 r=ex
             ))
         except FileNotFoundError:
@@ -80,18 +84,18 @@ class UdiskDevice:
 
     def unmount(self):
         """ Unmount the device."""
-        self.logger.debug("Unmounting : %s", self._dev_name)
+        self.logger.debug("Unmounting : %s", self.dev_name)
         try:
-            p = subprocess.Popen(['udisksctl', 'unmount', '-b', self._dev_name], stdout=subprocess.PIPE,
+            p = subprocess.Popen(['udisksctl', 'unmount', '-b', self.dev_name], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
             p.communicate()
 
-            self.logger.debug("Mounted at : %s", self._mount_path)
+            self._mount_path = None
         except subprocess.CalledProcessError as ex:
-            self.logger.error("{} not unmounted".format(self._dev_name))
+            self.logger.error("{} not unmounted".format(self.dev_name))
             raise UnMountError(
                 "Mount of {devname} (cmd:{r.cmd}) returned exit code {r.returncode} with stderr {r.stderr}".format(
-                    devname=self._dev_name,
+                    devname=self.dev_name,
                     r=ex
                 ))
         except FileNotFoundError:
@@ -105,7 +109,7 @@ class UdiskDevice:
         """
         with open("/proc/mounts", "r") as mounts:
             for line in mounts:
-                if line.startswith(self._dev_name):
+                if line.startswith(self.dev_name):
                     return Path(line.split(' ')[1])
 
         return None
@@ -130,7 +134,18 @@ class UdiskDevice:
     @property
     def dev_name(self) -> str:
         """ Return device name. """
-        return self._dev_name
+        return self._device['DEVNAME']
+
+    @property
+    def parent_dev_name(self) -> str:
+        """
+        Return the parent device name (without partition number)
+        :return: The parent device name.
+        """
+        if 'parent' in self._device:
+            return self._device.parent['DEVNAME']
+        else:
+            return self._device['DEVNAME'][:-1]
 
 
 class MountError(Exception):

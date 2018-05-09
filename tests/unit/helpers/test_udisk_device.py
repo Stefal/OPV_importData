@@ -21,13 +21,16 @@ import subprocess
 from opv_import.helpers import UdiskDevice
 from opv_import.helpers.udisk_device import MountError, UnMountError, MissingUdiskError
 from path import Path
-from unittest.mock import patch, call, MagicMock
+from unittest.mock import patch, call, MagicMock, PropertyMock
 
 
 class TestUdiskDevice(object):
 
+    def get_device(self):
+        return {'DEVNAME': "/dev/sdc1"}
+
     def test__udisks_extract_mount_path(self):
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
         assert dev._udisks_extract_mount_path(
             udisk_output='Mounted /dev/sdc1 at /media/benjamin/B291-4FA9.\n') == Path("/media/benjamin/B291-4FA9")
         assert dev._udisks_extract_mount_path(
@@ -45,14 +48,14 @@ class TestUdiskDevice(object):
         p.communicate.return_value = (out, MagicMock())
         mock_popen.return_value = p
 
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
         assert dev.mount() == "/media/benjamin/B291-4FA9"
         assert mock_popen.call_args_list == [call(['udisksctl', 'mount', '-b', '/dev/sdc1'], stderr=-1, stdout=-1)]
 
     @patch("subprocess.Popen")
     def test_mount_udisk_fail(self, mock_popen):
         mock_popen.side_effect = subprocess.CalledProcessError(returncode=-1, cmd=None)
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
         with pytest.raises(MountError):
             dev.mount()
 
@@ -61,7 +64,7 @@ class TestUdiskDevice(object):
     @patch("subprocess.Popen")
     def test_mount_udisk_not_installed(self, mock_popen):
         mock_popen.side_effect = FileNotFoundError()
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
         with pytest.raises(MissingUdiskError):
             dev.mount()
 
@@ -74,14 +77,14 @@ class TestUdiskDevice(object):
         p.communicate.return_value = (MagicMock(), MagicMock())
         mock_popen.return_value = p
 
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
         dev.unmount()
         assert mock_popen.call_args_list == [call(['udisksctl', 'unmount', '-b', '/dev/sdc1'], stderr=-1, stdout=-1)]
 
     @patch("subprocess.Popen")
     def test_unmount_udisk_fail(self, mock_popen):
         mock_popen.side_effect = subprocess.CalledProcessError(returncode=-1, cmd=None)
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
         with pytest.raises(UnMountError):
             dev.unmount()
 
@@ -90,7 +93,7 @@ class TestUdiskDevice(object):
     @patch("subprocess.Popen")
     def test_unmount_udisk_not_installed(self, mock_popen):
         mock_popen.side_effect = FileNotFoundError()
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
         with pytest.raises(MissingUdiskError):
             dev.unmount()
 
@@ -111,7 +114,7 @@ gvfsd-fuse /run/user/1000/gvfs fuse.gvfsd-fuse rw,nosuid,nodev,relatime,user_id=
         ctx_open.__exit__ = MagicMock()
         mock_open.return_value = ctx_open
 
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
 
         assert dev._find_mount_path() == Path("/media/benjamin/B291-4FA9")
         mock_open.assert_called_with("/proc/mounts", 'r')
@@ -130,14 +133,14 @@ gvfsd-fuse /run/user/1000/gvfs fuse.gvfsd-fuse rw,nosuid,nodev,relatime,user_id=
         ctx_open.__exit__ = MagicMock()
         mock_open.return_value = ctx_open
 
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
 
         assert dev._find_mount_path() == None
         mock_open.assert_called_with("/proc/mounts", 'r')
 
     @patch("opv_import.helpers.UdiskDevice._find_mount_path")
     def test_is_mounted_notmounted(self, mock_find_mount_path):
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
 
         mock_find_mount_path.return_value = None
 
@@ -146,7 +149,7 @@ gvfsd-fuse /run/user/1000/gvfs fuse.gvfsd-fuse rw,nosuid,nodev,relatime,user_id=
 
     @patch("opv_import.helpers.UdiskDevice._find_mount_path")
     def test_is_mounted_ok(self, mock_find_mount_path):
-        dev = UdiskDevice(device_name="/dev/sdc1")
+        dev = UdiskDevice(device=self.get_device())
 
         mounted_path = MagicMock(Path)
         mounted_path.exists = MagicMock()
@@ -155,3 +158,16 @@ gvfsd-fuse /run/user/1000/gvfs fuse.gvfsd-fuse rw,nosuid,nodev,relatime,user_id=
 
         assert dev.is_mounted()
         assert mock_find_mount_path.call_count == 1
+
+    def test_parent_devname_with_parent(self):
+        device = MagicMock()
+        type(device).parent = PropertyMock(return_value={'DEVNAME': "/dev/sdc"})
+
+        udev = UdiskDevice(device=self.get_device())
+        assert udev.parent_dev_name == "/dev/sdc"
+
+    def test_parent_devname_without_parent(self):
+        device = self.get_device()
+
+        udev = UdiskDevice(device=self.get_device())
+        assert udev.parent_dev_name == "/dev/sdc"

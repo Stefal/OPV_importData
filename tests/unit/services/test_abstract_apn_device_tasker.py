@@ -17,11 +17,12 @@
 # Description: Unit test DeviceApn tasker.
 
 import pytest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock, call, PropertyMock
 
 import pyudev
 
 from opv_import.model import ApnDevice
+from opv_import.model.apn_device import ApnDeviceNumberNotFoundError
 from opv_import.services import AbstractApnDeviceTasker
 from opv_import.services.abstract_apn_device_tasker import SD_UDEV_OBSERVER_NAME
 
@@ -121,7 +122,8 @@ class TestAbstractApnDeviceTasker(object):
 
         # apn_device mock
         apn_device = MagicMock(ApnDevice)
-        apn_device.apn_number = 0
+        apn_device.apn_number = MagicMock()
+        type(apn_device).apn_number = PropertyMock(return_value=42)
         mock_apn_device.return_value = apn_device
 
         # mock is seen
@@ -130,7 +132,7 @@ class TestAbstractApnDeviceTasker(object):
         tasker = AbstractApnDeviceTasker(number_of_devices=2, number_of_worker=2)
         tasker._on_udev_event("add", udev_dev)
 
-        assert mock_apn_device.call_args_list[-1] == call(device_name=udev_dev['DEVNAME'])
+        assert mock_apn_device.call_args_list[-1] == call(device=udev_dev)
         assert mock_is_seen.call_args_list[-1] == call(device=apn_device)
         assert mock_add_treat.call_args_list[-1] == call(device=apn_device)
 
@@ -140,7 +142,7 @@ class TestAbstractApnDeviceTasker(object):
         # repeating same call
         tasker._on_udev_event("add", udev_dev)
 
-        assert mock_apn_device.call_args_list[-1] == call(device_name=udev_dev['DEVNAME'])
+        assert mock_apn_device.call_args_list[-1] == call(device=udev_dev)
         assert mock_is_seen.call_args_list[-1] == call(device=apn_device)
         assert mock_add_treat.call_count == 1
 
@@ -192,3 +194,19 @@ class TestAbstractApnDeviceTasker(object):
 
         assert mock_event_instance.wait.call_count == 1
         assert mock_pool_instance.wait_all_task_treated.call_count == 1
+
+    def test__has_required_configuration_ok(self):
+        mock_device = MagicMock(ApnDevice)
+        mock_device.apn_number = MagicMock()
+        type(mock_device).apn_number = PropertyMock(return_value=42)
+
+        tasker = object.__new__(AbstractApnDeviceTasker)
+        assert tasker._has_required_configuration(device=mock_device)
+
+    def test__has_required_configuration_fail(self):
+        mock_device = MagicMock(ApnDevice)
+        mock_device.apn_number = MagicMock()
+        type(mock_device).apn_number = PropertyMock(side_effect=ApnDeviceNumberNotFoundError())
+
+        tasker = object.__new__(AbstractApnDeviceTasker)
+        assert not tasker._has_required_configuration(device=mock_device)

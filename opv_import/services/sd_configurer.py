@@ -39,7 +39,7 @@ class SdConfigurer(AbstractApnDeviceTasker):
 
     def _generate_task(self, device: model.ApnDevice) -> Callable:
         """
-        Generate the copy/rsync task.
+        Generate the config task.
         :param device: Device to be copied.
         :return: A task, callable with no args and no return.
         """

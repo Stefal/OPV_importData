@@ -19,6 +19,7 @@
 import json
 import logging
 from path import Path
+import pyudev
 
 from opv_import.helpers import UdiskDevice
 
@@ -32,12 +33,12 @@ class ApnDevice(UdiskDevice):
     Represent an APN device.
     """
 
-    def __init__(self, device_name: Path):
+    def __init__(self, device: pyudev.Device):
         """
         Intanciate an APN Device.
-        :param device_name: The device name, should be something like "/dev/sda1"
+        :param device: The device pyudev.
         """
-        super().__init__(device_name=device_name)
+        super().__init__(device=device)
 
         self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
 
