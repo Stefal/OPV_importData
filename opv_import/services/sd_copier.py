@@ -39,9 +39,8 @@ class SdCopier(AbstractApnDeviceTasker):
         :param number_of_devices: Number of devices to watch (used to know when we have finished.
         :param dest_path: format destination path from an APN ID (it's a lambda), apn_ids must start at 0 to number_of_devices.
         """
-        self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
-
         AbstractApnDeviceTasker.__init__(self, number_of_worker=COPY_NUMBER_OF_WORKERS, number_of_devices=number_of_devices)
+        self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
 
         self._apn_dest_path = dest_path
         self._apn_dest_path.makedirs_p()  # ensure output directory exists

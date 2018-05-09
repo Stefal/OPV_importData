@@ -3,6 +3,7 @@
 
 from setuptools import setup, find_packages
 
+
 setup(
     name='opv_import',
     packages=find_packages(),
@@ -32,7 +33,8 @@ setup(
             'opv-clean-sd = opv_import.cleanSD:main',
             'opv-sd-copier = opv_import.controllers.cli.opv_sd_copier:main',
             'opv-sd-configurer = opv_import.controllers.cli.opv_sd_configurer:main',
-            'opv-sd-cleaner = opv_import.controllers.cli.opv_sd_cleaner:main'
+            'opv-sd-cleaner = opv_import.controllers.cli.opv_sd_cleaner:main',
+            'opv-make-lot = opv_import.controllers.cli.opv_make_lot:main'
         ],
     }
 )
