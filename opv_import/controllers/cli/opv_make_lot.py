@@ -110,7 +110,7 @@ def main():
         csv_meta_path=p['csv_path']
     )
 
-    logger.info("Starting making lot, go take some coffe (it might be really long)")
+    logger.info("Starting making lot, go take some coffee (it might be really long)")
     treat.make_lot()
     logger.info("Creating campaign ...")
     treat.create_campaign(name=p['campaign_name'], id_rederbro=p['campaign_id_rederbro'], description=p['campaign_desc'])

@@ -29,8 +29,6 @@ setup(
     url='https://github.com/OpenPathView/OPV_importData',
     entry_points={
         'console_scripts': [
-            'opv-import = opv_import.__main__:main',
-            'opv-clean-sd = opv_import.cleanSD:main',
             'opv-sd-copier = opv_import.controllers.cli.opv_sd_copier:main',
             'opv-sd-configurer = opv_import.controllers.cli.opv_sd_configurer:main',
             'opv-sd-cleaner = opv_import.controllers.cli.opv_sd_cleaner:main',
