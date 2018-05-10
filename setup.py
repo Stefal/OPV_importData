@@ -3,8 +3,9 @@
 
 from setuptools import setup, find_packages
 
+
 setup(
-    name='importData',
+    name='opv_import',
     packages=find_packages(),
     author="",
     author_email="",
@@ -28,8 +29,10 @@ setup(
     url='https://github.com/OpenPathView/OPV_importData',
     entry_points={
         'console_scripts': [
-            'opv-import = importData.__main__:main',
-            'opv-clean-sd = importData.cleanSD:main',
+            'opv-sd-copier = opv_import.controllers.cli.opv_sd_copier:main',
+            'opv-sd-configurer = opv_import.controllers.cli.opv_sd_configurer:main',
+            'opv-sd-cleaner = opv_import.controllers.cli.opv_sd_cleaner:main',
+            'opv-make-lot = opv_import.controllers.cli.opv_make_lot:main'
         ],
     }
 )

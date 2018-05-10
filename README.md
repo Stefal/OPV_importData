@@ -2,71 +2,107 @@
 
 Iso files need git lfs installed to be fetch cf. [git lfs](https://git-lfs.github.com/)
 
-# Batch Pano Maker
-Scripts that import data from our backpack, make data sets with metas (GPS, orientation ....) and stitch all panoramas.
+# Rederbro - Import data utility
 
-/!\ Need Hugin for CP_stats.py
+## Context
+Rederbro is the name we gave to our backpack, this backpack takes spherical pictures using 6 cameras and is also equiped
+with a GPS and compass.
+
+Pictures are saved on the 6 cameras SD cards and GPS/compass (we will call them RederbroMeta) are saved in a CSV file.
+Note that the cameras doesn't have their own batteries they are connected on a central battery that not always
+plugged in, this mean they can loose their dates and time.
+
+It's really long to manually copy all pictures from SD card and organize them. Also to make spherical pictures
+we need to group the pictures and associate the correct RederbroMeta to a set of 6 images. Camera syncrhonization is
+suppose to be good, but sometimes some cameras may fail (and not take all pictures). Date and times on the RederbroMeta
+is also not always occurate (in absolute value) as the backpack isn't always on power supply.
+
+What we have is relative timings on the camera pictures exif data and in the CSV file, we also know that most of the
+time pictures and RederbroMeta are taken saved correctly. For that we made an algorithm to maximise the matches and 
+generate set of 6 images matched with RederbroMeta. A set of 6 images with the RederbroMeta is called a Lot.
+
+All generated Lot are then saved in database using our [API](https://github.com/OpenPathView/OPV_DBRest), pictures are
+saved using our [DirectoryManager](https://github.com/OpenPathView/DirectoryManager) (more details about our 
+infrastructure and containers deployment script are [here](https://github.com/OpenPathView/OPV_Ansible)).
 
 ## Installation
+
+We use udiskctl to mount and umount devices :
+```bash
 apt install udisks2
-### Start by creating a venv
-`virtualenv mon_env -p /usr/bin/python3.5 --no-site-packages`
-### Go inside
-`. mon_env/bin/activate`
-### Install all dependencies
-`pip install -r requirements.txt`
-### Install importData
-`./setup.py install` or, if you're developing on it, `./setup.py develop`
+```
 
-## Launch
-### Then the api server
-`python api/server.py run`
-### Then launch the import from importData dir
-`opv-import capucin --csv-path=/home/tom/Documents/OPV/OPV_importData/importData/picturesInfo.csv`
-`opv-import --import --csv-path=/home/tom/picturesInfo.csv --dir-manager-uri=http://10.91.114.219:5005 --api-uri=http://10.91.114.219:5000 --ref=last 15 botanic --no-treati`
+### Install opv_import python module
 
-## Architecture
-This software is now composed of three components:
- * A filemanager server - a simple server that allow to make a link between unique ID and directory, will quickly be remplaced by [a more complete solution](https://github.com/OpenPathView/DirectoryManager/). See into filemanager.
- * An API server - a simple REST server that expose a DB. See into api/.
- * The import data script - a script that import data from sd-cards, make lots and exports all data into the DB through the api and the filemanager.
+You should use a virtualenv.
 
-### API
-It's a server located on port 5000
-The API server implement this database:
-![Database](https://raw.githubusercontent.com/OpenPathView/OPV_importData/master/doc/database/main_db.png)
-And some content for more easy debugging:
-- get all lots of an campaign (here campaign ID=1): `httpie GET :5000/campaign/1/lots`
-- get all cp of a lot (here lot ID=1): `httpie GET :5000/lot/1/cps`
-- get all tiles of a panorama (here panorama ID=1): `httpie GET :5000/panorama/1/tiles`
-- stop the server (only if --debug is precised while launching the server): `http POST :5000/shutdown`
+`python setup.py install` or, if you're developing on it, `python setup.py develop`
 
+## Step to import data
 
-### Import data script
-This script imports, detect sd-card, mount them using udisks2 (udiskctl), copy all images to data dir and create lots.
-See `import.py --help` for options.
-There are also statics options in OPV_importData/importData/config/main.json
-- data-dir - default: ~/opv/rederbro/{campaign}/ - Where images from sd-cards are copied to.
-- pi-location - default : pi@192.168.42.1:/home/pi/opv/lastPictureInfo.csv" - Where pictureInfo (metas from rederbro backpack) should be grabbed.
-- ISO - default: ~/opv/iso/goPro.iso" - Where is the iso of an empty sd-card. Unutilized when clean-sd is false.
-- clean-sd - default: false - Remove files from the sd-card (do a dd). Commented for the moment.
-- import - default: true - Import files from sd-card
-- export - default: true - Send lots into the celery queue
-- treat - default: true - Make lots from data
-- id-rederbro - default: 1 - The id of the rederbro
-- lots-output-dir - default: ~/opv/lots/{campaign} - Where lots should be stored.
+### Batch copy images from all cards
 
-#### Make Empty ISO
+You don't want to manipulate cards as it takes times, that's why we made a script that will listen on new plugged devices 
+and copy DCIM folders from all configured camera SD cards, even if they are all plugged at the same time. For Open Path View, 
+we use an USB3.0 hub to plug our 6 SD cards at the same time after the import script is launched.
+
+```bash
+opv-sd-copier -h  # for full details
+opv-sd-copier /tmp/import_cameras_output
+```
+
+If you are using gnome, be sure to disable gnome auto-mount feature using this command :
+```bash
+gsettings set org.gnome.desktop.media-handling automount false
+# to ensable it back
+# gsettings set org.gnome.desktop.media-handling automount true
+```
+
+### Make lot
+
+Now you have your images (and maybe a CSV file with RederbroMeta), you can launch the following command to make lots.
+All lots will be associated to a campaign in the database, you can specify the name, description and id_rederbro of the 
+campaign.
+
+```bash
+opv-make-lot -h # for full details
+opv-make-lot /tmp/import_cameras_output --csv-path=picturesInfocsv --campaign-name="After refacto"
+```
+
+This commands may take some times, don't worry. *You might need to configure the APIs endpoints, see `opv-make-lot -h` to see the options.*
+
+## Storage devices
+
+Each camera has an SD card. To know who is who when importing we needed to know from which camera comes an SD card to 
+do so we add a configuration file to the camera a file named `APN_config.json`.
+
+#### Configure each SD card
+
+We made an utility to do that, simply run `opv-sd-configurer` an insert your cards, you will be asked for each card
+to enter it's `apn_number` (apn number must start at 0, for us it's from 0 to 5 as we have 6 cameras).
+
+#### Clean SD card
+
+After data are copied, we needed an easy and efficient way of cleaning the SD cards. We made a script that will burn an 
+iso (disk image) on all plugged (and configured) devices. This disk image represent an SD card just after we format it 
+in the camera. Camera sometimes add some data on the SD card after formating it that why we prefer tu burn a clean image 
+(build by the camera) and we don't use FAT32 formating tool (see below how you can make the disk image).
+
+When you have the image simply run (if you have 6 devices, script will stop after they are cleaned) :
+```bash
+opv-sd-cleaner iso/goPro.iso --number-of-devices=6
+```
+
+#### Make the clean disk image
 SD cards for GoPro cameras needs to be well formated. The only way to do that is to format an SD card in a GoPro camera an copy it's partition table.
 To do so :
 - format your SD card in a GoPro camera
 - Make an ISO : `sudo dd if=/dev/sdb of=imgGoPro.img bs=10M count=1`
-- specify the path of this ISO in OPV_importData/importData/config/main.json
 
 
 # License
 
-Copyright (C) 2017 Open Path View <br />
+Copyright (C) 2018 Open Path View <br />
 This program is free software; you can redistribute it and/or modify  <br />
 it under the terms of the GNU General Public License as published by  <br />
 the Free Software Foundation; either version 3 of the License, or  <br />

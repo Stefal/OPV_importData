@@ -1,1 +1,2 @@
 recursive-include importData *.json
+recursive-include importData *.yaml
