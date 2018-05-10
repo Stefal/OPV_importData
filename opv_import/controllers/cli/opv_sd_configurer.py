@@ -17,7 +17,7 @@
 # Description: Command ligne entry point to copy data (DCIM folders) from a set of external devices.
 
 """
-Copy data (DCIM folders) from a set of external devices, containing a configuration file.
+Configure a set of SD card by setting an "apn_number" to each card.
 Usage:
     opv-sd-configurer [options]
 
