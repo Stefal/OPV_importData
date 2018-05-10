@@ -60,7 +60,7 @@ class RsyncWrapper():
         if even_listener_name is None:
             even_listener_name = "progress_{id}".format(id=len(self._progression_listeners))
 
-        self._progression_listeners.update({even_listener_name: event_listener})
+        self._progression_listeners[even_listener_name] = event_listener
         return even_listener_name
 
     def __fire_progress_event(self, global_progression: float):

@@ -21,8 +21,6 @@ Copy data (DCIM folders) from a set of external devices, containing a configurat
 Usage:
     opv-sd-configurer [options]
 
-Arguments:
-    output-directory            Directory where all APN's DCIM folders will be copied (structure will be dir/APN$i/DCIM
 Options:
     -h --help                   Show this screen
     --debug                     Enable debugging options.
