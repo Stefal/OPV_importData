@@ -134,6 +134,7 @@ class AbstractApnDeviceTasker:
         :param action: Device action state.
         :param device: The udev device.
         """
+        # self.logger.debug("UDEV ev, action: %r, device: %r", action, device)
         if action == "add" and 'DEVNAME' in device.keys() and "partition" in device.attributes.available_attributes:
             self.logger.debug("Device %s added", device['DEVNAME'])
             device_model = model.ApnDevice(device=device)

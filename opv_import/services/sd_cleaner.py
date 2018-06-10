@@ -31,23 +31,20 @@ SD_CLEANER_NO_DEVICE_COUNT = -1
 
 class SdCleaner(AbstractApnDeviceTasker):
 
-    def __init__(self, iso_path: Path,
+    def __init__(self,
+                 fs: model.FileSystem,
                  number_of_devices: int=SD_CLEANER_NO_DEVICE_COUNT):
         """
         M Propre service. Clean SD/devices.
-        :param iso_path: Path of a clean ISO.
+        :param fs: File system used on the SD cards paritions.
         :param number_of_devices: Will stop if all devices where seen, devices needs to be numbered from 0 to number_of_devices-1.
         :raises FileNotFoundError: When the ISO file doesn't exists.
         """
         AbstractApnDeviceTasker.__init__(self, number_of_worker=SD_CLEANER_NUM_THREAD, number_of_devices=number_of_devices)
         self.logger = logging.getLogger(SdCleaner.__module__ + "." + SdCleaner.__class__.__name__)
 
-        self._iso_path = iso_path
-        if not iso_path.exists():
-            raise FileNotFoundError
-
+        self._fs = fs
         self._clean_event = None  # clean event
-
         self._terminated = {apn_num: 0 for apn_num in range(0, number_of_devices)}  # apn_number -> bool (True if terminated)
 
     def on_clean(self, clean_event: Callable[[model.ApnDevice], None]=None):
@@ -57,17 +54,30 @@ class SdCleaner(AbstractApnDeviceTasker):
         """
         self._clean_event = clean_event
 
-    def _dd_device(self, device: model.ApnDevice):
+    def _get_mkfs_args(self, fs: model.FileSystem):
         """
-        DD the device if ISO.
-        :param device: Device to dd.
+        Generate correct arguments for mkfs depending of the file system.
+        :param fs: Wanted file system
+        :return: A list of mkfs arguments
         """
-        self.logger.debug("Umounting and cleaning device %r, with iso : %s", device, self._iso_path)
+        if fs == model.FileSystem.FAT32:
+            return ["-t", "vfat", "-F", "32"]
+        elif fs == model.FileSystem.EXFAT:
+            return ["-t", "exfat"]
+
+        return []
+
+    def _mkfs(self, device: model.ApnDevice):
+        """
+        Reformat partition of an ApnDevice
+        """
+        self.logger.debug("Reformating device : %r, in fs: %r", device, self._fs)
         device.unmount()
-        subprocess.run(['sudo', 'dd', "if={iso}".format(iso=self._iso_path), "of={parent}".format(parent=device.parent_dev_name)])
-        time.sleep(0.25)  # unexplained bug
+        subprocess.run(
+            ['sudo', 'mkfs', *self._get_mkfs_args(fs=self._fs), device.dev_name])
+        self.logger.debug("DRY - cmd : %r", ['sudo', 'mkfs', *self._get_mkfs_args(fs=self._fs), device.dev_name])
         device.mount()
-        self.logger.debug("Device cleaned (and mounted again) : %r", device)
+        self.logger.debug("Device reformated : %r", device)
 
     def _generate_task(self, device: model.ApnDevice) -> Callable:
         """
@@ -79,11 +89,7 @@ class SdCleaner(AbstractApnDeviceTasker):
             self.logger.debug("Cleaning device : %r", device)
             device.apn_number # access it to be sure that configuration file is loaded
 
-            self._dd_device(device=device)  # cleaning device
-
-            # device.save_config()  # really ensure it's saved
-
-            # device.unmount()
+            self._mkfs(device=device)  # cleaning device
 
             # setting device to treated
             self._terminated[device.apn_number] = True
