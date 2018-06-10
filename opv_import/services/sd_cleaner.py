@@ -89,6 +89,8 @@ class SdCleaner(AbstractApnDeviceTasker):
             self._terminated[device.apn_number] = True
 
             self.logger.debug("Device (%r) cleaned, configured and unmounted :) ", device)
+            device.save_config()
+            device.unmount()
 
             if self._clean_event is not None:
                 self._clean_event(device)
