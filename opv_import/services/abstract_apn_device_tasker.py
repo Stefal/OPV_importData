@@ -134,7 +134,7 @@ class AbstractApnDeviceTasker:
         :param action: Device action state.
         :param device: The udev device.
         """
-        if action == "add" and 'DEVNAME' in device.keys():
+        if action == "add" and 'DEVNAME' in device.keys() and "partition" in device.attributes.available_attributes:
             self.logger.debug("Device %s added", device['DEVNAME'])
             device_model = model.ApnDevice(device=device)
 
@@ -148,6 +148,8 @@ class AbstractApnDeviceTasker:
                     self.logger.error("Device %r, doesn't have suffisant configuration to be tracked", device)
             else:
                 self._add_device_to_treatment(device=device_model)
+        elif action == "add" and 'DEVNAME' in device.keys() and not "partition" in device.attributes.available_attributes:
+            self.logger.warning("Device %r as no partitions, please make partitions", device)
 
     def start(self):
         """
