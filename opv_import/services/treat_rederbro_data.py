@@ -144,7 +144,7 @@ class TreatRederbroData:
 
     def save_all_lot(self, on_progress_listener: Callable[[float], None]):
         """
-        Save all lots.
+        Save all lots (with images sets).
         :param on_progress_listener: A lambda that will be executed when progression evolve, with the progression rate.
         :raises CampaignNeededException: You need a campaign to associated lot with it.
         """
@@ -155,7 +155,10 @@ class TreatRederbroData:
 
         for i in range(0, len(self._lots)):
             lot = self._lots[i]
-            self._ress_manager.make_lot(lot=lot, campaign=self._campaign)
+
+            if lot.cam_set is not None:   # Save only lot with images
+                self._ress_manager.make_lot(lot=lot, campaign=self._campaign)
+
             progression_rate = (i+1) / nb_of_lots
             on_progress_listener(progression_rate)
 
