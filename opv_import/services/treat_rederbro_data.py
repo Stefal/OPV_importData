@@ -31,6 +31,8 @@ from opv_directorymanagerclient import DirectoryManagerClient
 from opv_import import services
 from opv_import import model
 
+from opv_import.services.ressource_manager import InvalidLotForDbError
+
 MAX_CONSECUTIVE_INCOMPLET_CAM_SETS = 35
 ERROR_WINDOW_SIZE = 10
 MAX_INCOMPLETE_SETS_IN_WINDOW = 4
@@ -156,8 +158,11 @@ class TreatRederbroData:
         for i in range(0, len(self._lots)):
             lot = self._lots[i]
 
-            if lot.cam_set is not None:   # Save only lot with images
-                self._ress_manager.make_lot(lot=lot, campaign=self._campaign)
+            if not(lot.meta is None or lot.meta.geopoint is None or lot.cam_set is None):  # prevent camera set only (without meta) lot, can't be saved as sensors are needed
+                try:
+                    self._ress_manager.make_lot(lot=lot, campaign=self._campaign)
+                except InvalidLotForDbError:
+                    pass
 
             progression_rate = (i+1) / nb_of_lots
             on_progress_listener(progression_rate)

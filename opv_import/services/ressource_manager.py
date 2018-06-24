@@ -32,7 +32,7 @@ from opv_import import model
 
 from geojson import Point
 
-class RessourceManager():  # TODO TEST
+class RessourceManager():
     """
     Service to manage ressources with database.
     """
@@ -136,15 +136,26 @@ class RessourceManager():  # TODO TEST
         """
         self.logger.debug("Saving lot : %r, for campaign.id_campaign: %i", lot, campaign.id_campaign)
 
+        if lot.meta is None or lot.meta.geopoint is None or lot.cam_set is None:
+            raise InvalidLotForDbError("Lot must have meta, sensors and cam_set ...")
+
+
         dblot = self._opv_api_client.make(DbRestRessources.Lot)
         dblot.id_malette = self._id_malette
         dblot.campaign = campaign
         dblot.pictures_path = self.make_picture_path(img_set=lot.cam_set)  # creates DM uuid
+        dblot.tile = None   # No tile at this stage
         dblot.sensors = self.make_sensors(meta=lot.meta)
         dblot.goprofailed = self._model_gp_error_to_db(lot.meta.gopro_errors)
         dblot.takenDate = datetime.datetime.fromtimestamp(lot.meta.timestamp, tz=datetime.timezone.utc).isoformat()
-        dblot.tile = None   # No tile at this stage
+
         dblot.create()
 
         self.logger.debug("Saved lot with id_lot: %i, id_malette: %i", dblot.id_lot, dblot.id_malette)
         return dblot
+
+
+class InvalidLotForDbError(model.OpvImportError):
+    """
+    When a lot is not valid for saving in database.
+    """

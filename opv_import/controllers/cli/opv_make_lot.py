@@ -112,6 +112,30 @@ def main():
 
     logger.info("Starting making lot, go take some coffee (it might be really long)")
     treat.make_lot()
+
+    lot_complete = 0
+    lot_with_meta_only = 0
+    lot_with_cam_set_only = 0
+    lot_without_geopoint = 0
+
+    for lot in treat._lots:
+        if lot.meta is None and lot.cam_set is None:
+            logger.error("WTF")
+
+        if lot.meta is None:
+            lot_with_meta_only += 1
+        elif lot.meta is None:
+            lot_with_cam_set_only += 1
+        elif lot.meta.geopoint is None:
+            lot_without_geopoint += 0
+        else:
+            lot_complete += 1
+
+    logger.debug("Number of complete lot : %i", lot_complete)
+    logger.debug("Number of lot with meta only : %i", lot_with_meta_only)
+    logger.debug("Number of lot with cam_set only : %i", lot_with_cam_set_only)
+    logger.debug("Number of lot without geopoint : %i", lot_without_geopoint)
+
     logger.info("Creating campaign ...")
     treat.create_campaign(name=p['campaign_name'], id_rederbro=p['campaign_id_rederbro'], description=p['campaign_desc'])
     logger.info("Saving lots int db (lucky you, you will know have a progression).")
