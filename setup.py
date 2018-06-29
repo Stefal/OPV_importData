@@ -22,7 +22,8 @@ setup(
         "pyudev",
         "geojson",
         "opv_api_client",
-        "opv_directorymanagerclient"
+        "opv_directorymanagerclient",
+        "PyYAML"
     ],
     # Active la prise en compte du fichier MANIFEST.in
     include_package_data=True,
