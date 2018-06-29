@@ -19,7 +19,7 @@
 import pytest
 from unittest.mock import patch, MagicMock, call, PropertyMock
 from path import Path
-from opv_import.model import ApnDevice
+from opv_import.model import ApnDevice, FileSystem
 from opv_import.services import SdCleaner
 
 from typing import Callable
@@ -28,24 +28,20 @@ class TestSdCleaner(object):
 
     @patch("subprocess.run")
     @patch("opv_import.services.AbstractApnDeviceTasker.__init__")
-    def test__dd_device(self, mock_abs_init, mock_subprocress):
-        iso_path = MagicMock(Path)
-        iso_path.exists = MagicMock(return_value=True)
-        iso_path.__str__ = MagicMock(return_value="img.iso")
-
+    def test__mkfs(self, mock_abs_init, mock_subprocress):
         device = MagicMock(ApnDevice)
-        type(device).parent_dev_name = PropertyMock(return_value="/dev/sdc")
+        type(device).dev_name = PropertyMock(return_value="/dev/sdc1")
 
-        sd_cleaner = SdCleaner(iso_path=iso_path)
-        sd_cleaner._dd_device(device=device)
+        sd_cleaner = SdCleaner(fs=FileSystem.FAT32)
+        sd_cleaner._mkfs(device=device)
 
         assert device.mount.call_args_list == [call()]
         assert device.unmount.call_args_list == [call()]
-        assert mock_subprocress.call_args_list == [call(['sudo', 'dd', "if=img.iso", "of=/dev/sdc"])]
+        assert mock_subprocress.call_args_list == [call(['sudo', 'mkfs', "-t", "vfat", "-F", "32", "/dev/sdc1"])]
 
-    @patch("opv_import.services.SdCleaner._dd_device")
+    @patch("opv_import.services.SdCleaner._mkfs")
     @patch("opv_import.services.AbstractApnDeviceTasker.__init__")
-    def test__generate_task(self, mock_abs_init, mock_dd):
+    def test__generate_task(self, mock_abs_init, mock_mkfs):
         iso_path = MagicMock(Path)
         iso_path.exists = MagicMock(return_value=True)
         iso_path.__str__ = MagicMock(return_value="img.iso")
@@ -56,11 +52,11 @@ class TestSdCleaner(object):
 
         clean_event_listener = MagicMock(Callable)
 
-        sd_cleaner = SdCleaner(iso_path=iso_path)
+        sd_cleaner = SdCleaner(fs=FileSystem.FAT32)
         sd_cleaner.on_clean(clean_event=clean_event_listener)
         task = sd_cleaner._generate_task(device=device)
         task()
 
-        assert mock_dd.call_args_list == [call(device=device)]
+        assert mock_mkfs.call_args_list == [call(device=device)]
         assert sd_cleaner.is_device_transfert_terminated(apn_number=42)
         assert clean_event_listener.call_args_list == [call(device)]
