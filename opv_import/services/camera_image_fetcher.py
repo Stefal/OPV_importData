@@ -19,10 +19,12 @@
 #              DCF rules are a bit customized as GoPro camera doesn't follow them strictly, should not impact other cameras
 
 import logging
+import os
 from path import Path
 from typing import List
 from opv_import.model import CameraImage
 from opv_import.model import OpvImportError
+from opv_import.helpers import pictures_utils
 
 DCF_FILE_ALPHADIGIT_LEN = 4  # according to DCF specification DCF files have 4 alphadigit at the begining
 DCF_FOLDERS_DIGIT_LEN = 3    # according to DCF specification DCF directories (DCMI subdirectories) have 3 digit at the begining
@@ -173,32 +175,39 @@ class CameraImageFetcher:
 
     def fetch_images(self) -> List[CameraImage]:
         """
-        Return a list of pictures ordered by their names using DCF standard and GoPro logic.
-        No cache used.
+        Return a list of pictures ordered by their timestamp
 
         :param dcim_folder: Path to dcmi folder.
         :return: ordered list of pictures path.
         """
-        dcf_dirs = self._order_dcf_dir(self.dcim_folder.dirs())
-        pic_files = []
-        self.logger.debug(" dcf_dirs ")
-        self.logger.debug(dcf_dirs)
+        
+        self.logger.debug(" Searching for jpeg images in ")
+        self.logger.debug(self.dcim_folder)
 
-        if len(dcf_dirs) == 0:
-            return []
+        file_list = []
+        for root, sub_folders, files in os.walk(self.dcim_folder):
+            file_list += [os.path.join(root, filename) for filename in files if filename.lower().endswith(".jpg")]
 
-        next_index = GORPRO_IMG_START_INDEX
-        for k_dir in range(0, len(dcf_dirs)):
-            next_dcf_folder = dcf_dirs[k_dir + 1] if k_dir + 1 < len(dcf_dirs) else None
-            next_index, pics = self._fetch_pic_files_from_dcf_dir(
-                dcf_dir=dcf_dirs[k_dir],
-                start_index=next_index)
+        files = []
+        # get DateTimeOriginal data from the images and sort the list by timestamp
+        for filepath in file_list:
+            #print(filepath)
+            #metadata = EXIFRead(filepath)
+            
+            try:
+                timestamp = pictures_utils.read_exif_time(filepath)
+                
+                files.append((filepath, timestamp))
+                # print t
+                # print type(t)
+            except KeyError as e:
+                # if any of the required tags are not set the image is not added to the list
+                print("Skipping {0}: {1}".format(filepath, e))
 
-            pic_files.extend(pics)
-
-            # setting next index to initial on if the serie doesn't continue in the next folder
-            if next_dcf_folder is not None and not self._check_serie_continue_in_folder(next_index=next_index, next_dcf_folder_path=next_dcf_folder):
-                next_index = GORPRO_IMG_START_INDEX
+        files.sort(key=lambda file: file[1])
+        # print_list(files)
+        
+        pic_files = [CameraImage(pic[0]) for pic in files]
 
         return pic_files
 
