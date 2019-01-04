@@ -44,7 +44,7 @@ class CameraImageFetcher:
         self._img_start_index = img_start_index
         self._cache_camimg = None
 
-        self._extract_file_names_param()  # extract prefix, ext, digit len used after
+        #self._extract_file_names_param()  # extract prefix, ext, digit len used after
 
         self.logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
 
