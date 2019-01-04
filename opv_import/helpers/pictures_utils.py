@@ -31,6 +31,6 @@ def read_exif_time(pic_path: str) -> int:
     with open(pic_path, "rb") as f:
         tags = exifread.process_file(f, stop_tag='EXIF DateTimeOriginal')
 
-    timestamp = int(datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values, "%Y:%m:%d %H:%M:%S").timestamp())
+    timestamp = int(datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values[:19], "%Y:%m:%d %H:%M:%S").timestamp())
 
     return timestamp
