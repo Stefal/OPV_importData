@@ -116,7 +116,7 @@ class RessourceManager():
         """
         with self._opv_dm_client.Open() as (uuid, dir_path):
             for key, photo in img_set.items():
-                dest = Path(dir_path) / 'APN{}{}'.format(key, photo.path.ext)
+                dest = Path(dir_path) / 'APN{}{}'.format(key, photo.path.ext.upper())
                 if self._use_hardlink:
                     self.logger.debug("Hardlinking : {} -> {}".format(photo.path, dest))
                     os.link(photo.path, dest)
