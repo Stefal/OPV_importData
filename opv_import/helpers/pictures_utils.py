@@ -26,11 +26,17 @@ def read_exif_time(pic_path: str) -> int:
     :param pic_path: Pictures location.
     :type pic_path: str
     :return: Pictures taken time, timestamp.
-    :rtype: int (timestamp)
+    :rtype: float (timestamp)
     """
     with open(pic_path, "rb") as f:
-        tags = exifread.process_file(f, stop_tag='EXIF DateTimeOriginal')
+        tags = exifread.process_file(f, details=False)
+    
+    subsec = 0
+    if "EXIF SubSecTimeOriginal" in tags.keys():
+        subsec = tags['EXIF SubSecTimeOriginal'].values
 
-    timestamp = int(datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values[:19], "%Y:%m:%d %H:%M:%S").timestamp())
+    capture_time = datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values[:19], "%Y:%m:%d %H:%M:%S")
+    capture_time += datetime.timedelta(seconds=float("0." + subsec))
+    timestamp = float(capture_time.timestamp)
 
     return timestamp
