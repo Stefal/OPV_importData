@@ -37,6 +37,6 @@ def read_exif_time(pic_path: str) -> int:
 
     capture_time = datetime.datetime.strptime(tags['EXIF DateTimeOriginal'].values[:19], "%Y:%m:%d %H:%M:%S")
     capture_time += datetime.timedelta(seconds=float("0." + subsec))
-    timestamp = float(capture_time.timestamp)
+    timestamp = float(capture_time.timestamp())
 
     return timestamp
