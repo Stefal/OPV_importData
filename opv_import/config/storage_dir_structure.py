@@ -17,4 +17,6 @@
 # Description: Describe output device import storage directory structure.
 
 # Using in maklot to get input files and on the device import scripts
-APN_NUM_TO_APN_OUTPUT_DIR = "APN{}"
+
+#APN_NUM_TO_APN_OUTPUT_DIR = "APN{}"
+APN_NUM_TO_APN_OUTPUT_DIR = ['avant', 'droite', 'arriere', 'gauche']

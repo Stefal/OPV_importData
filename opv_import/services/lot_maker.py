@@ -17,6 +17,7 @@
 # Description: Lot Maker, takes CSV en pictures and manage them to get coherent set of datas.
 
 import logging
+import os
 from path import Path
 from opv_import.helpers import indexes_walk
 from opv_import.services import CameraImageFetcher
@@ -30,7 +31,7 @@ def dt(ts):
     return datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
 
 TIME_MARGING = 3  # max time difference accepted in picture exif metadata
-CAM_DCIM_PATH = APN_NUM_TO_APN_OUTPUT_DIR
+CAM_DCIM_PATHS = APN_NUM_TO_APN_OUTPUT_DIR
 REF_SEARCH_NB_LOT_GENERATED = 30  # default number lot generated for camera set reference search
 REF_SEARCH_MAX_INCOMPLET_CONSECUTIVE_SET = 7  # Maximum number of accepted consecutive incomplete sets during reference search
 REF_SEARCH_MAX_INCOMPLET_SETS = 10  # Maximum total number of incomplete sets during reference search
@@ -73,10 +74,21 @@ class LotMaker:
         if self.fetchers is not None:
             return self.fetchers
 
+        dir_list = [i for i in os.listdir(self.pictures_path) if os.path.isdir(i)]
+
+        # compare if there are n folders for n cams
+        if len(CAM_DCIM_PATHS) != self.nb_cams:
+            raise ValueError("You should have the same number of folder and cam number")
+        
         self.fetchers = []
-        for no in range(0, self.nb_cams):
-            fetcher = CameraImageFetcher(dcim_folder=self.pictures_path / CAM_DCIM_PATH.format(no)) 
-            # self.pictures_path / CAM_DCIM_PATH.format(no) <- concatenate path
+
+        for string in CAM_DCIM_PATHS:
+            try:
+                idx = [i.lower() for i in dir_list].index(string.lower())
+                pictures_path = os.path.abspath(os.path.join(self.pictures_path, dir_list[idx]))
+            except ValueError:
+                print("I can't find {0}".format(string))
+            fetcher = CameraImageFetcher(dcim_folder=pictures_path) 
             fetcher.fetch_images()
             self.fetchers.append(fetcher)
 
