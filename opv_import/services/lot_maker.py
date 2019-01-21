@@ -74,21 +74,21 @@ class LotMaker:
         if self.fetchers is not None:
             return self.fetchers
 
-        dir_list = [i for i in os.listdir(self.pictures_path) if os.path.isdir(i)]
-
+        dir_list = self.pictures_path.dirs()
+       
         # compare if there are n folders for n cams
         if len(CAM_DCIM_PATHS) != self.nb_cams:
             raise ValueError("You should have the same number of folder and cam number")
         
         self.fetchers = []
-
+        import ipdb; ipdb.set_trace()
         for string in CAM_DCIM_PATHS:
             try:
-                idx = [i.lower() for i in dir_list].index(string.lower())
-                pictures_path = os.path.abspath(os.path.join(self.pictures_path, dir_list[idx]))
+                idx = [path.name.lower() for path in dir_list].index(string.lower())
+                cam_pictures_path = dir_list[idx]
             except ValueError:
-                print("I can't find {0}".format(string))
-            fetcher = CameraImageFetcher(dcim_folder=pictures_path) 
+                print("I can't find folder with {0} in its name".format(string))
+            fetcher = CameraImageFetcher(dcim_folder=cam_pictures_path) 
             fetcher.fetch_images()
             self.fetchers.append(fetcher)
 

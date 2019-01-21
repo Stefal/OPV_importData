@@ -31,7 +31,7 @@ def read_exif_time(pic_path: str) -> int:
     with open(pic_path, "rb") as f:
         tags = exifread.process_file(f, details=False)
     
-    subsec = 0
+    subsec = '0'
     if "EXIF SubSecTimeOriginal" in tags.keys():
         subsec = tags['EXIF SubSecTimeOriginal'].values
 
