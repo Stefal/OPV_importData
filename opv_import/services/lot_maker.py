@@ -81,7 +81,6 @@ class LotMaker:
             raise ValueError("You should have the same number of folder and cam number")
         
         self.fetchers = []
-        import ipdb; ipdb.set_trace()
         for string in CAM_DCIM_PATHS:
             try:
                 idx = [path.name.lower() for path in dir_list].index(string.lower())
